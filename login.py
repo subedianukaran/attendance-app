@@ -74,7 +74,7 @@ class Display:
         if user:
             self.root.destroy()
             messagebox.showinfo("Login", f"Welcome, {entered_username}!")
-            import homepage  # hello there
+            import homepage  # hello
         else:
             messagebox.showerror("Login Error", "Credentials don't match")
 
