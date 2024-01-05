@@ -1,152 +1,82 @@
-from tkinter import *
+import tkinter as tk
 from tkinter import messagebox
 import sqlite3
-import hashlib
 
-def create_database():
-    conn = sqlite3.connect('Credentials.db')
-    cursor = conn.cursor()
+class DatabaseManager:
+    def __init__(self, db_name):
+        self.conn = sqlite3.connect(db_name)
+        self.cursor = self.conn.cursor()
 
-    # Create the Users table if it doesn't exist
-    cursor.execute('''
-        CREATE TABLE IF NOT EXISTS Users (
-            username TEXT PRIMARY KEY,
-            password TEXT
-        )
-    ''')
+    def create_table(self, table_name, columns):
+        self.cursor.execute(f"CREATE TABLE IF NOT EXISTS {table_name} ({columns})")
+        self.conn.commit()
 
-    conn.commit()
-    conn.close()
+    def execute_query(self, query, data=None):
+        if data:
+            self.cursor.execute(query, data)
+        else:
+            self.cursor.execute(query)
+        self.conn.commit()
+
+    def fetch_all(self, query, data=None):
+        if data:
+            self.cursor.execute(query, data)
+        else:
+            self.cursor.execute(query)
+        return self.cursor.fetchall()
+
+    def close_connection(self):
+        self.conn.close()
 
 
 class Display:
-
     def __init__(self):
-        pass
+        self.root = tk.Tk()
+        self.root.title("Login")
+        self.root.geometry("450x250")
 
-    def create_user_db(self,username):
-        self.username = username
-        db_name = f"{self.username}.db"
-        conn = sqlite3.connect(db_name)
-        cursor = conn.cursor()
+        self.main_db = DatabaseManager('Credentials.db')
+        self.create_main_table()
 
-        cursor.execute('''
-            CREATE TABLE IF NOT EXISTS RecordList (
-                id INTEGER PRIMARY KEY,
-                Class TEXT
-            )
-        ''')
+        self.create_login_page()
 
-        conn.commit()
-        conn.close()
+    def create_main_table(self):
+        columns = "username TEXT PRIMARY KEY, password TEXT"
+        self.main_db.create_table('Users', columns)
+
+    def create_user_db(self, username):
+        db_name = f"{username}.db"
+        user_db = DatabaseManager(db_name)
+        user_db.create_table('RecordList', 'id INTEGER PRIMARY KEY, Class TEXT')
+        user_db.close_connection()
 
     def submit(self):
-        self.new_username = self.entry_new_username.get()
-        self.new_password = self.entry_new_password.get()
+        new_username = self.entry_new_username.get()
+        new_password = self.entry_new_password.get()
 
-        # Connect to the main credentials database
-        conn_main = sqlite3.connect('Credentials.db')
-        cursor_main = conn_main.cursor()
+        # Checking if existing user is trying to signup
+        query = 'SELECT * FROM Users WHERE username=?'
+        existing_user = self.main_db.fetch_all(query, (new_username,))
 
-        cursor_main.execute('INSERT INTO Users VALUES (?, ?)', (self.new_username, self.new_password))
-        conn_main.commit()
+        if existing_user:
+            messagebox.showerror("Username Exists", "Username already exists. Try logging in instead.")
+        else:
+            self.main_db.execute_query('INSERT INTO Users VALUES (?, ?)', (new_username, new_password))
+            messagebox.showinfo("Success", "User Added")
+            self.create_user_db(new_username)
 
-        messagebox.showinfo("Success", "User Added")
+    def login_conn(self):
+        entered_username = self.entry_username.get()
+        entered_password = self.entry_password.get()
 
-        conn_main.close()
-
-        # Create a separate database for the new user
-        self.create_user_db(self.new_username)
-
-    def login_conn(self,username_entry, password_entry):
-        self.entered_username = username_entry.get()  # Use username_entry in the login page
-        self.entered_password = password_entry.get()  # Use password_entry in the login page
-
-        conn = sqlite3.connect('Credentials.db')
-        cursor = conn.cursor()
-
-        cursor.execute('SELECT * FROM Users WHERE username=? AND password=?', (self.entered_username, self.entered_password))
-        user = cursor.fetchone()
-
+        query = 'SELECT * FROM Users WHERE username=? AND password=?'
+        user = self.main_db.fetch_all(query, (entered_username, entered_password))
         if user:
-            messagebox.showinfo("Login", f"Welcome, {self.entered_username}!")
-            root.destroy()
-            import gui_homepage
-
+            self.root.destroy()
+            messagebox.showinfo("Login", f"Welcome, {entered_username}!")
+            import homepage
         else:
             messagebox.showerror("Login Error", "Credentials don't match")
-
-        conn.close()
-    def login_page(self):
-        self.loginframe = Frame(root)
-        self.loginframe.pack(fill=BOTH, expand=True)
-
-        login_label = Label(self.loginframe, text="Login", font=("Arial", 18, "bold"))
-        login_label.grid(pady=30)
-        login_label.pack()
-        label_username = Label(self.loginframe, text="Username:")
-        label_username.pack()
-
-        entry_username = Entry(self.loginframe)
-        entry_username.pack()
-
-        label_password = Label(self.loginframe, text="Password:")
-        label_password.pack()
-
-        entry_password = Entry(self.loginframe, show='*')
-        entry_password.pack()
-
-        button_login = Button(self.loginframe, text="Login") #command=login_conn(entry_username, entry_password))
-        button_login.pack()
-
-        label_new_user = Label(self.loginframe, text="New User?")
-        label_new_user.pack(side=LEFT)
-
-        button_signup = Button(self.loginframe, text="Sign Up",
-                               command=lambda: (self.loginframe.destroy(), self.signup_page()))
-        button_signup.pack(side=LEFT)
-
-        button_remove_user = Button(self.loginframe, text="Remove Existing User",
-                                    command=lambda: (self.loginframe.destroy(), self.remove_page())) #, command=removeuser_page) # this may create error try to use this same command
-        button_remove_user.pack(side=RIGHT)
-
-    def signup_page(self):
-        self.signupframe = Frame(root)
-        self.signupframe.pack(fill=BOTH, expand=TRUE)
-
-        signup_label = Label(self.signupframe, text="Sign Up", font=("Arial", 18, "bold"))
-        signup_label.grid(pady=30)
-        signup_label.pack()
-
-
-        self.label_new_username = Label(self.signupframe, text="Username:")
-        self.label_new_username.pack()
-
-        self.entry_new_username = Entry(self.signupframe)
-        self.entry_new_username.pack()
-
-        self.label_new_password = Label(self.signupframe, text="Password:")
-        self.label_new_password.pack()
-
-        self.entry_new_password = Entry(self.signupframe, show='*')
-        self.entry_new_password.pack()
-
-        button_submit = Button(self.signupframe, text="Submit", command=self.submit)
-        button_submit.pack()
-
-        button_return_login = Button(self.signupframe, text="Return to Login Page", command=lambda: (self.signupframe.destroy(), self.login_page()))
-        button_return_login.pack()
-
-    def display_users(self):
-        conn = sqlite3.connect('Credentials.db')
-        cursor = conn.cursor()
-
-        cursor.execute('SELECT * FROM Users')
-        users = cursor.fetchall()
-
-        conn.close()
-
-        return users
 
     def remove_user(self):
         selected_index = int(self.entry_index.get())
@@ -167,39 +97,97 @@ class Display:
 
         conn.close()
 
-    def remove_page(self):
-        self.removeframe = Frame(root)
-        self.removeframe.pack(fill=BOTH, expand=TRUE)
+    def create_login_page(self):
+        if hasattr(self, 'remove_frame'):
+            self.remove_frame.pack_forget()
+        if hasattr(self, 'signup_frame'):
+            self.signup_frame.pack_forget()
+        self.login_frame = tk.Frame(self.root)
+        self.login_frame.pack(fill=tk.BOTH, expand=True)
 
+        self.label_username = tk.Label(self.login_frame, text="Username:")
+        self.label_username.pack()
 
-        label_instructions = Label(self.removeframe, text="Enter index of user to remove:")
+        self.entry_username = tk.Entry(self.login_frame)
+        self.entry_username.pack()
+
+        self.label_password = tk.Label(self.login_frame, text="Password:")
+        self.label_password.pack()
+
+        self.entry_password = tk.Entry(self.login_frame, show='*')
+        self.entry_password.pack()
+
+        button_login = tk.Button(self.login_frame, text="Login", command=lambda: self.login_conn())
+        button_login.pack()
+
+        label_new_user = tk.Label(self.login_frame, text="New User?")
+        label_new_user.pack(side=tk.LEFT)
+
+        button_signup = tk.Button(self.login_frame, text="Sign Up", command=lambda: self.create_signup_page())
+        button_signup.pack(side=tk.LEFT)
+
+        button_remove_user = tk.Button(self.login_frame, text="Remove Existing User", command=lambda: self.create_remove_page())
+        button_remove_user.pack(side=tk.RIGHT)
+
+    def create_signup_page(self):
+        if hasattr(self, 'signup_frame'):
+            self.signup_frame.pack_forget()
+
+        self.login_frame.pack_forget()
+
+        self.signup_frame = tk.Frame(self.root)
+        self.signup_frame.pack(fill=tk.BOTH, expand=True)
+
+        self.label_new_username = tk.Label(self.signup_frame, text="New Username:")
+        self.label_new_username.pack()
+
+        self.entry_new_username = tk.Entry(self.signup_frame)
+        self.entry_new_username.pack()
+
+        self.label_new_password = tk.Label(self.signup_frame, text="New Password:")
+        self.label_new_password.pack()
+
+        self.entry_new_password = tk.Entry(self.signup_frame, show='*')
+        self.entry_new_password.pack()
+
+        button_submit = tk.Button(self.signup_frame, text="Submit", command=lambda: self.submit())
+        button_submit.pack()
+
+        button_return_login = tk.Button(self.signup_frame, text="Return to Login Page", command=lambda: self.create_login_page())
+        button_return_login.pack()
+
+    def create_remove_page(self):
+        if hasattr(self, 'remove_frame'):
+            self.remove_frame.pack_forget()
+
+        self.login_frame.pack_forget()
+
+        self.remove_frame = tk.Frame(self.root)
+        self.remove_frame.pack(fill=tk.BOTH, expand=True)
+
+        label_instructions = tk.Label(self.remove_frame, text="Enter index of user to remove:")
         label_instructions.pack()
 
         # Display user list
-        users = self.display_users()
-        for index, user in enumerate(users):
-            Label(self.removeframe, text=f"{index}: {user[0]}").pack()
+        conn = sqlite3.connect('Credentials.db')
+        cursor = conn.cursor()
+        cursor.execute('SELECT * FROM Users')
+        users = cursor.fetchall()
 
-        self.entry_index = Entry(self.removeframe)
+        for index, user in enumerate(users):
+            tk.Label(self.remove_frame, text=f"{index}: {user[0]}").pack()
+
+        self.entry_index = tk.Entry(self.remove_frame)
         self.entry_index.pack()
 
-        button_remove = Button(self.removeframe, text="Remove", command=self.remove_user)
+        button_remove = tk.Button(self.remove_frame, text="Remove", command=lambda: self.remove_user())
         button_remove.pack()
 
-        button_return_login = Button(self.removeframe, text="Return to Login Page", command=lambda: (self.removeframe.destroy(), self.login_page()))
+        button_return_login = tk.Button(self.remove_frame, text="Return to Login Page", command=lambda: self.create_login_page())
         button_return_login.pack()
 
-
-def login_window():
-    global root
-    root = Tk()
-    root.title("Login")
-    root.geometry("450x250")
-    display_instance = Display()
-    display_instance.login_page()
-    root.mainloop()
+        conn.close()
 
 
-create_database()
-login_window()
-
+display_instance = Display()
+display_instance.root.mainloop()
