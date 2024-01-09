@@ -115,7 +115,7 @@ class MainPage:
     def create_class_tables(self, class_name):
         # Table for storing names of students in the class
         create_names_table_query = f'''
-            CREATE TABLE IF NOT EXISTS {class_name}_names (
+            CREATE TABLE IF NOT EXISTS names_{class_name} (
                 RollNo INTEGER PRIMARY KEY,
                 Name TEXT
             )
@@ -125,9 +125,9 @@ class MainPage:
 
         # Table for storing attendance of students in the class
         create_attendance_table_query = f'''
-            CREATE TABLE IF NOT EXISTS {class_name}_attendance (
+            CREATE TABLE IF NOT EXISTS attendance_{class_name} (
                 RollNo INTEGER,
-                FOREIGN KEY(RollNo) REFERENCES {class_name}_names(RollNo)
+                FOREIGN KEY(RollNo) REFERENCES names_{class_name} (RollNo)
             )
         '''
         self.cursor.execute(create_attendance_table_query)
@@ -153,6 +153,7 @@ class MainPage:
                 class_name = classes[index][0]
                 self.cursor.execute(f"DELETE FROM RecordList WHERE Class='{class_name}'")
                 self.cursor.execute(f'DROP TABLE names_{class_name}')
+                self.cursor.execute(f'DROP TABLE attendance_{class_name}')
                 self.conn.commit()
                 messagebox.showinfo("Success", f"Class '{class_name}' removed successfully.")
                 self.home_frame.destroy()
