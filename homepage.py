@@ -12,27 +12,6 @@ class MainPage:
 
         self.home_page()
 
-    def add_new_class(self):
-        new_class_name = tk.simpledialog.askstring("Add New Class", "Enter new class name:")
-
-        if new_class_name:
-            class_exists = self.check_class_exists(new_class_name)
-
-            if class_exists:
-                messagebox.showinfo("Class Exists", "Class already exists.")
-            else:
-                self.cursor.execute('INSERT INTO RecordList (Class) VALUES (?)', (new_class_name,))
-                self.conn.commit()
-                self.create_class_tables(new_class_name)
-                messagebox.showinfo("Success", f"Class '{new_class_name}' added successfully.")
-                self.home_frame.destroy()
-                self.home_page()
-
-
-
-                # Create new tables for the added class
-
-
     def create_class_tables(self, class_name):
         # Table for storing names of students in the class
         create_names_table_query = f'''
@@ -56,6 +35,21 @@ class MainPage:
 
         messagebox.showinfo("Tables Created", f"Tables created for '{class_name}' successfully.")
 
+    def add_new_class(self):
+        new_class_name = tk.simpledialog.askstring("Add New Class", "Enter new class name:")
+
+        if new_class_name:
+            class_exists = self.check_class_exists(new_class_name)
+
+            if class_exists:
+                messagebox.showinfo("Class Exists", "Class already exists.")
+            else:
+                self.cursor.execute('INSERT INTO RecordList (Class) VALUES (?)', (new_class_name,))
+                self.conn.commit()
+                self.create_class_tables(new_class_name)
+                messagebox.showinfo("Success", f"Class '{new_class_name}' added successfully.")
+                self.home_frame.destroy()
+                self.home_page()
 
     def display_classes(self):
         self.cursor.execute('SELECT Class FROM RecordList')
@@ -88,13 +82,6 @@ class MainPage:
 
     def class_details(self, class_name):
         messagebox.showinfo("Class Details", f"You selected class: '{class_name}'.")
-
-    def refresh_display(self):
-        # Clear the existing buttons and re-display classes
-        for widget in self.root.winfo_children():
-            widget.destroy()
-
-        self.display_classes()
 
     def home_page(self):
         self.home_frame = tk.Frame(self.root)
