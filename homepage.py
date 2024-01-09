@@ -3,6 +3,74 @@ from tkinter import messagebox
 import sqlite3
 from tkinter import simpledialog
 
+
+class AttendanceManager:
+    def __init__(self,conn,class_name):
+
+        self.class_name = class_name
+        self.conn = conn
+        self.cursor = self.conn.cursor()
+
+        self.take_attendance()
+
+
+    def take_attendance(self):
+
+        date = simpledialog.askstring("Input", "Enter date for attendance (YYYY-MM-DD):")
+
+        if date:
+            # Checking whether the date column exists in class_attendance table or not
+            column_check_query = f"PRAGMA table_info(attendance_{self.class_name})"
+            self.cursor.execute(column_check_query)
+            columns = [column[1] for column in self.cursor.fetchall()]
+
+            if date in columns:
+                messagebox.showinfo("Info", "Already taken, go to edit data to make changes.")
+            else:
+
+                self.cursor.execute(f"ALTER TABLE attendance_{self.class_name} ADD COLUMN '{date}' BIT")
+                self.conn.commit()
+
+                # Fetching student names and roll numbers
+                student_query = f"SELECT Name, RollNo FROM names_{self.class_name} ORDER BY Name"
+                self.cursor.execute(student_query)
+                self.students = self.cursor.fetchall()
+
+
+                self.attendance_window = tk.Toplevel()
+                self.attendance_window.title(f"Attendance for {date}")
+
+                self.current_student = 0
+                self.show_attendance(self.students[self.current_student], date)
+
+    def show_attendance(self, student, date):
+        name_label = tk.Label(self.attendance_window, text=f"Name of Student: {student[0]}")
+        name_label.pack()
+
+        roll_label = tk.Label(self.attendance_window, text=f"Roll No: {student[1]}")
+        roll_label.pack()
+
+        present_button = tk.Button(self.attendance_window, text="Present", command=lambda: self.mark_attendance(date, student[1], True))
+        present_button.pack()
+
+        absent_button = tk.Button(self.attendance_window, text="Absent", command=lambda: self.mark_attendance(date, student[1], False))
+        absent_button.pack()
+
+    def mark_attendance(self, date, roll_no, status):
+        # Updating the attendance for the current student
+        update_query = f"UPDATE attendance_{self.class_name} SET '{date}' = ? WHERE RollNo = ?"
+        self.cursor.execute(update_query, (str(status), roll_no))
+        self.conn.commit()
+
+        # Go to the next student
+        self.current_student += 1
+
+        if self.current_student < len(self.students):
+            self.show_attendance(self.students[self.current_student], date)
+        else:
+            messagebox.showinfo("Info", "Attendance taken for all students.")
+            self.attendance_window.destroy()
+
 class ClassHomePage:
     def __init__(self, class_name, root,cursor, conn):
         self.class_name = class_name
@@ -12,7 +80,8 @@ class ClassHomePage:
         pass
 
     def take_attendance(self):
-        pass
+        attendance = AttendanceManager(self.conn, self.class_name)
+        attendance.take_attendance()
 
     def edit_records(self):
         pass
@@ -27,7 +96,42 @@ class ClassHomePage:
         pass
 
     def remove_students(self):
-        pass
+        def remove_students():
+            student_names = student_entry.get()
+            student_list = [name.strip() for name in student_names.split(',')]
+            students_not_found = []
+
+            try:
+
+                for name in student_list:
+                    if name:
+                        self.cursor.execute(f"DELETE FROM names_{self.class_name} WHERE Name = ?", (name,))
+                        if self.cursor.rowcount == 0:
+                            students_not_found.append(name)
+
+                self.conn.commit()
+
+                if students_not_found:
+                    messagebox.showwarning("Students Not Found",
+                                           f"The following students weren't found: {', '.join(students_not_found)}")
+                else:
+                    messagebox.showinfo("Success", "Students removed successfully.")
+
+            except sqlite3.Error as e:
+                messagebox.showerror("Database Error", f"Error: {e}")
+
+        student_window = tk.Toplevel()
+        student_window.title("Remove Students")
+
+        student_label = tk.Label(student_window, text="Enter student names to remove (separated by comma):")
+        student_label.pack()
+
+        student_entry = tk.Entry(student_window, width=40)
+        student_entry.pack()
+
+        remove_button = tk.Button(student_window, text="Remove", command=remove_students)
+        remove_button.pack()
+
 
     def edit_students(self):
         pass
@@ -42,7 +146,6 @@ class ClassHomePage:
                         self.cursor.execute(f"INSERT INTO names_{self.class_name} (Name) VALUES (?)", (name,))
                         self.conn.commit()
 
-                self.conn.close()
                 messagebox.showinfo("Success", "Students added successfully.")
 
             except sqlite3.Error as e:
