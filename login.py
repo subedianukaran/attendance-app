@@ -1,6 +1,7 @@
 import tkinter as tk
 from tkinter import messagebox
 import sqlite3
+import os
 
 from homepage import MainPage
 
@@ -48,7 +49,7 @@ class Login:
 
     def create_user_db(self, username):
         db_name = f"{username}.db"
-        user_db = DatabaseManager(self.db_name)
+        user_db = DatabaseManager(db_name)
         user_db.create_table('RecordList', 'id INTEGER PRIMARY KEY, Class TEXT')
         user_db.close_connection()
 
@@ -95,7 +96,11 @@ class Login:
             username_to_remove = users[selected_index][0]
             cursor.execute('DELETE FROM Users WHERE username=?', (username_to_remove,))
             conn.commit()
+            os.remove(f"{username_to_remove}.db")
             messagebox.showinfo("Success", f"User '{username_to_remove}' removed successfully.")
+            self.remove_frame.destroy()
+            self.create_remove_page()
+
         else:
             messagebox.showerror("Error", "Invalid index")
 
