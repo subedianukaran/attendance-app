@@ -2,6 +2,8 @@ import tkinter as tk
 from tkinter import messagebox
 import sqlite3
 
+from homepage import MainPage
+
 class DatabaseManager:
     def __init__(self, db_name):
         self.conn = sqlite3.connect(db_name)
@@ -29,11 +31,11 @@ class DatabaseManager:
         self.conn.close()
 
 
-class Display:
+class Login:
     def __init__(self):
         self.root = tk.Tk()
         self.root.title("Login")
-        self.root.geometry("450x250")
+        self.root.geometry("450x250") # 450 x 250
 
         self.main_db = DatabaseManager('Credentials.db')
         self.create_main_table()
@@ -46,7 +48,7 @@ class Display:
 
     def create_user_db(self, username):
         db_name = f"{username}.db"
-        user_db = DatabaseManager(db_name)
+        user_db = DatabaseManager(self.db_name)
         user_db.create_table('RecordList', 'id INTEGER PRIMARY KEY, Class TEXT')
         user_db.close_connection()
 
@@ -74,7 +76,9 @@ class Display:
         if user:
             self.root.destroy()
             messagebox.showinfo("Login", f"Welcome, {entered_username}!")
-            import homepage  # hello
+            homepage= MainPage(entered_username)
+            homepage.root.mainloop()
+          # entered_username as variable
         else:
             messagebox.showerror("Login Error", "Credentials don't match")
 
@@ -189,5 +193,5 @@ class Display:
         conn.close()
 
 
-display_instance = Display()
+display_instance = Login()
 display_instance.root.mainloop()
