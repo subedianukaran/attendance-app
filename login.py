@@ -75,8 +75,8 @@ class Login:
         query = 'SELECT * FROM Users WHERE username=? AND password=?'
         user = self.main_db.fetch_all(query, (entered_username, entered_password))
         if user:
-            self.root.destroy()
             messagebox.showinfo("Login", f"Welcome, {entered_username}!")
+            self.root.destroy()
             homepage= MainPage(entered_username)
             homepage.root.mainloop()
           # entered_username as variable
