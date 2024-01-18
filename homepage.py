@@ -19,7 +19,6 @@ class AttendanceManager:
         date = simpledialog.askstring("Input", "Enter date for attendance (YYYY-MM-DD):")
 
         if date:
-            # Checking whether the date column exists in class_attendance table or not
             column_check_query = f"PRAGMA table_info(attendance_{self.class_name})"
             self.cursor.execute(column_check_query)
             columns = [column[1] for column in self.cursor.fetchall()]
@@ -31,7 +30,6 @@ class AttendanceManager:
                 self.cursor.execute(f"ALTER TABLE attendance_{self.class_name} ADD COLUMN '{date}' BIT")
                 self.conn.commit()
 
-                # Fetching student names and roll numbers
                 student_query = f"SELECT Name, RollNo FROM names_{self.class_name} ORDER BY Name"
                 self.cursor.execute(student_query)
                 self.students = self.cursor.fetchall()
@@ -41,6 +39,7 @@ class AttendanceManager:
 
                 self.current_student = 0
                 self.show_attendance(self.students[self.current_student], date)
+
 
     def show_attendance(self, student, date):
         name_label = tk.Label(self.attendance_window, text=f"Name of Student: {student[0]}")
@@ -55,13 +54,12 @@ class AttendanceManager:
         absent_button = tk.Button(self.attendance_window, text="Absent", command=lambda: self.mark_attendance(date, student[1], status = False))
         absent_button.pack()
 
+
     def mark_attendance(self, date, roll_no, status):
-        # Updating the attendance for the current student
         update_query = f"UPDATE attendance_{self.class_name} SET '{date}' = ? WHERE RollNo = ?"
         self.cursor.execute(update_query, (status, roll_no))
         self.conn.commit()
 
-        # Go to the next student
         self.current_student += 1
 
         if self.current_student < len(self.students):
@@ -69,6 +67,7 @@ class AttendanceManager:
         else:
             messagebox.showinfo("Info", "Attendance taken for all students.")
             self.attendance_window.destroy()
+
 
 class ClassHomePage:
     def __init__(self, class_name, root,cursor, conn):
@@ -82,21 +81,27 @@ class ClassHomePage:
         attendance = AttendanceManager(self.conn, self.class_name)
         attendance.take_attendance()
 
+
     def edit_records(self):
         pass
+
 
     def view_statistics(self):
         pass
 
+
     def delete_records(self):
         pass
+
 
     def view_students(self):
         pass
 
+
     def remove_students(self):
         def remove_students():
             student_names = student_entry.get()
+            student_window.destroy()
             student_list = [name.strip() for name in student_names.split(',')]
             students_not_found = []
 
@@ -119,6 +124,7 @@ class ClassHomePage:
             except sqlite3.Error as e:
                 messagebox.showerror("Database Error", f"Error: {e}")
 
+
         student_window = tk.Toplevel()
         student_window.title("Remove Students")
 
@@ -134,9 +140,12 @@ class ClassHomePage:
 
     def edit_students(self):
         pass
+
+
     def add_students(self):
         def add_students_d():
             student_names = student_entry.get()
+            student_window.destroy()
             student_list = [name.strip() for name in student_names.split(',')]
 
             try:
@@ -162,16 +171,15 @@ class ClassHomePage:
         add_button = tk.Button(student_window, text="Add", command=add_students_d)
         add_button.pack()
 
+
     def classpage(self):
         self.class_frame = tk.Frame(self.root)
         self.class_frame.pack(fill=tk.BOTH, expand=True)
 
-        # Label for class name
         class_label = tk.Label(self.class_frame, text=self.class_name, font=("Arial", 18, "bold"))
         class_label.grid(pady=30)
         class_label.pack()
 
-        # Buttons
         button_texts = ["Take Attendance", "Edit Records", "View Statistics",
                         "Delete Records", "View Students","Add Students", "Remove Students", "Edit Student Data"]
         button_commands = [self.take_attendance, self.edit_records, self.view_statistics, self.delete_records,
@@ -215,8 +223,8 @@ class MainPage:
                 self.home_frame.destroy()
                 self.home_page()
 
+
     def create_class_tables(self, class_name):
-        # Table for storing names of students in the class
         create_names_table_query = f'''
             CREATE TABLE IF NOT EXISTS names_{class_name} (
                 RollNo INTEGER PRIMARY KEY,
@@ -226,7 +234,6 @@ class MainPage:
         self.cursor.execute(create_names_table_query)
         self.conn.commit()
 
-        # Table for storing attendance of students in the class
         create_attendance_table_query = f'''
             CREATE TABLE IF NOT EXISTS attendance_{class_name} (
                 RollNo INTEGER,
@@ -236,7 +243,6 @@ class MainPage:
         self.cursor.execute(create_attendance_table_query)
         self.conn.commit()
 
-        messagebox.showinfo("Tables Created", f"Tables created for '{class_name}' successfully.")
 
     def display_classes(self):
         self.cursor.execute('SELECT Class FROM RecordList')
@@ -245,6 +251,7 @@ class MainPage:
         for class_name in classes:
             tk.Button(self.home_frame, text=class_name[0], command=lambda cn=class_name[0].title(): self.class_details(cn),
                       width=10, height=2).pack(padx=5, pady=5)
+
 
     def remove_class(self):
         index = tk.simpledialog.askinteger("Remove Class", "Enter index of the class to remove:")  # Get index from user
@@ -265,35 +272,32 @@ class MainPage:
             else:
                 messagebox.showwarning("Invalid Index", "Please enter a valid index.")
 
+
     def check_class_exists(self, class_name):
         self.cursor.execute('SELECT * FROM RecordList WHERE Class=?', (class_name,))
         return self.cursor.fetchone()
+
 
     def class_details(self, class_name):
         self.home_frame.destroy()
         class_page = ClassHomePage(class_name, self.root,self.cursor,self.conn)
         class_page.classpage()
 
+
     def home_page(self):
         self.home_frame = tk.Frame(self.root)
         self.home_frame.pack(fill=tk.BOTH, expand=True)
 
-        # Top section: "Classes" label
         label_classes = tk.Label(self.home_frame, text="Classes", font=("Arial", 24, "bold"))
         label_classes.pack(pady=20)
 
-        # Middle section: Display Classes
-        self.display_classes()  # Assuming this method displays classes in the middle of the frame
-        # (Replace this line with your method to display classes)
+        self.display_classes() 
 
-        # Bottom section: Buttons
         button_frame = tk.Frame(self.home_frame)
         button_frame.pack(side=tk.BOTTOM, fill=tk.X, pady=10)
 
-        # Bottom left button
         self.add_class_button = tk.Button(button_frame, text="Add New Class", command=self.add_new_class)
         self.add_class_button.pack(side=tk.LEFT, padx=10)
 
-        # Bottom right button
         self.remove_class_button = tk.Button(button_frame, text="Remove Class", command=self.remove_class)
         self.remove_class_button.pack(side=tk.RIGHT, padx=10)

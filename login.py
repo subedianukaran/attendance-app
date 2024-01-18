@@ -5,6 +5,7 @@ import os
 import hashlib
 from homepage import MainPage
 
+
 class DatabaseManager:
     def __init__(self, db_name):
         self.conn = sqlite3.connect(db_name)
@@ -67,7 +68,6 @@ class Login:
         new_password = self.entry_new_password.get()
         enc_password = self.encrypt_password(new_password)
 
-        # Checking if existing user is trying to signup
         query = 'SELECT * FROM Users WHERE username=?'
         existing_user = self.main_db.fetch_all(query, (new_username,))
 
@@ -90,7 +90,6 @@ class Login:
             self.root.destroy()
             homepage= MainPage(entered_username)
             homepage.root.mainloop()
-          # entered_username as variable
         else:
             messagebox.showerror("Login Error", "Credentials don't match")
 
@@ -188,7 +187,6 @@ class Login:
         label_instructions = tk.Label(self.remove_frame, text="Enter index of user to remove:")
         label_instructions.pack()
 
-        # Display user list
         conn = sqlite3.connect('Credentials.db')
         cursor = conn.cursor()
         cursor.execute('SELECT * FROM Users')
