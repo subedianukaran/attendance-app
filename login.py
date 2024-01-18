@@ -2,7 +2,7 @@ import tkinter as tk
 from tkinter import messagebox
 import sqlite3
 import os
-
+import hashlib
 from homepage import MainPage
 
 class DatabaseManager:
@@ -43,6 +43,15 @@ class Login:
 
         self.create_login_page()
 
+    def encrypt_password(self,password):
+        sha256 = hashlib.sha256()
+
+        sha256.update(password.encode('utf-8'))
+
+        encrypted_password = sha256.hexdigest()
+
+        return encrypted_password
+
     def create_main_table(self):
         columns = "username TEXT PRIMARY KEY, password TEXT"
         self.main_db.create_table('Users', columns)
@@ -56,6 +65,7 @@ class Login:
     def submit(self):
         new_username = self.entry_new_username.get()
         new_password = self.entry_new_password.get()
+        enc_password = self.encrypt_password(new_password)
 
         # Checking if existing user is trying to signup
         query = 'SELECT * FROM Users WHERE username=?'
@@ -64,16 +74,17 @@ class Login:
         if existing_user:
             messagebox.showerror("Username Exists", "Username already exists. Try logging in instead.")
         else:
-            self.main_db.execute_query('INSERT INTO Users VALUES (?, ?)', (new_username, new_password))
+            self.main_db.execute_query('INSERT INTO Users VALUES (?, ?)', (new_username, enc_password))
             messagebox.showinfo("Success", "User Added")
             self.create_user_db(new_username)
 
     def login_conn(self):
         entered_username = self.entry_username.get()
         entered_password = self.entry_password.get()
+        enc_password = self.encrypt_password(entered_password)
 
         query = 'SELECT * FROM Users WHERE username=? AND password=?'
-        user = self.main_db.fetch_all(query, (entered_username, entered_password))
+        user = self.main_db.fetch_all(query, (entered_username, enc_password))
         if user:
             messagebox.showinfo("Login", f"Welcome, {entered_username}!")
             self.root.destroy()
