@@ -36,7 +36,6 @@ class AttendanceManager:
                 self.cursor.execute(student_query)
                 self.students = self.cursor.fetchall()
 
-
                 self.attendance_window = tk.Toplevel()
                 self.attendance_window.title(f"Attendance for {date}")
 
@@ -50,16 +49,16 @@ class AttendanceManager:
         roll_label = tk.Label(self.attendance_window, text=f"Roll No: {student[1]}")
         roll_label.pack()
 
-        present_button = tk.Button(self.attendance_window, text="Present", command=lambda: self.mark_attendance(date, student[1], True))
+        present_button = tk.Button(self.attendance_window, text="Present", command=lambda: self.mark_attendance(date, student[1], status = True))
         present_button.pack()
 
-        absent_button = tk.Button(self.attendance_window, text="Absent", command=lambda: self.mark_attendance(date, student[1], False))
+        absent_button = tk.Button(self.attendance_window, text="Absent", command=lambda: self.mark_attendance(date, student[1], status = False))
         absent_button.pack()
 
     def mark_attendance(self, date, roll_no, status):
         # Updating the attendance for the current student
         update_query = f"UPDATE attendance_{self.class_name} SET '{date}' = ? WHERE RollNo = ?"
-        self.cursor.execute(update_query, (str(status), roll_no))
+        self.cursor.execute(update_query, (status, roll_no))
         self.conn.commit()
 
         # Go to the next student
@@ -162,6 +161,7 @@ class ClassHomePage:
 
         add_button = tk.Button(student_window, text="Add", command=add_students_d)
         add_button.pack()
+
     def classpage(self):
         self.class_frame = tk.Frame(self.root)
         self.class_frame.pack(fill=tk.BOTH, expand=True)
@@ -192,7 +192,7 @@ class MainPage:
         self.root = tk.Tk()
         self.root.title("Attendance Application")
         self.root.geometry("600x450")
-        self.database=database
+        self.database = database
         self.conn = sqlite3.connect(f"{self.database}.db")
         self.cursor = self.conn.cursor()
 
@@ -270,7 +270,6 @@ class MainPage:
         return self.cursor.fetchone()
 
     def class_details(self, class_name):
-        messagebox.showinfo("Class Details", f"You selected class: '{class_name}'.")
         self.home_frame.destroy()
         class_page = ClassHomePage(class_name, self.root,self.cursor,self.conn)
         class_page.classpage()
@@ -298,5 +297,3 @@ class MainPage:
         # Bottom right button
         self.remove_class_button = tk.Button(button_frame, text="Remove Class", command=self.remove_class)
         self.remove_class_button.pack(side=tk.RIGHT, padx=10)
-
-
