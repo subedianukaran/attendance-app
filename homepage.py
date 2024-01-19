@@ -2,7 +2,7 @@ import tkinter as tk
 from tkinter import messagebox
 import sqlite3
 from tkinter import simpledialog
-
+from datetime import datetime
 
 class AttendanceManager:
     def __init__(self,conn,class_name):
@@ -16,10 +16,10 @@ class AttendanceManager:
 
     def take_attendance(self):
 
-        date = simpledialog.askstring("Input", "Enter date for attendance (YYYY-MM-DD):")
+        date = datetime.today().date()
 
         if date:
-            column_check_query = f"PRAGMA table_info(attendance_{self.class_name})"
+            column_check_query = f"PRAGMA table_info({self.class_name}_attendance)"
             self.cursor.execute(column_check_query)
             columns = [column[1] for column in self.cursor.fetchall()]
 
@@ -27,10 +27,10 @@ class AttendanceManager:
                 messagebox.showinfo("Info", "Already taken, go to edit data to make changes.")
             else:
 
-                self.cursor.execute(f"ALTER TABLE attendance_{self.class_name} ADD COLUMN '{date}' BIT")
+                self.cursor.execute(f"ALTER TABLE {self.class_name}_attendance ADD COLUMN '{date}' BIT")
                 self.conn.commit()
 
-                student_query = f"SELECT Name, RollNo FROM names_{self.class_name} ORDER BY Name"
+                student_query = f"SELECT Name, RollNo FROM {self.class_name}_names ORDER BY Name"
                 self.cursor.execute(student_query)
                 self.students = self.cursor.fetchall()
 
@@ -56,7 +56,7 @@ class AttendanceManager:
 
 
     def mark_attendance(self, date, roll_no, status):
-        update_query = f"UPDATE attendance_{self.class_name} SET '{date}' = ? WHERE RollNo = ?"
+        update_query = f"UPDATE {self.class_name}_attendance SET '{date}' = ? WHERE RollNo = ?"
         self.cursor.execute(update_query, (status, roll_no))
         self.conn.commit()
 
@@ -109,7 +109,7 @@ class ClassHomePage:
 
                 for name in student_list:
                     if name:
-                        self.cursor.execute(f"DELETE FROM names_{self.class_name} WHERE Name = ?", (name,))
+                        self.cursor.execute(f"DELETE FROM {self.class_name}_names WHERE Name = ?", (name,))
                         if self.cursor.rowcount == 0:
                             students_not_found.append(name)
 
@@ -151,7 +151,7 @@ class ClassHomePage:
             try:
                 for name in student_list:
                     if name:
-                        self.cursor.execute(f"INSERT INTO names_{self.class_name} (Name) VALUES (?)", (name,))
+                        self.cursor.execute(f"INSERT INTO {self.class_name}_names (Name) VALUES (?)", (name,))
                         self.conn.commit()
 
                 messagebox.showinfo("Success", "Students added successfully.")
@@ -226,7 +226,7 @@ class MainPage:
 
     def create_class_tables(self, class_name):
         create_names_table_query = f'''
-            CREATE TABLE IF NOT EXISTS names_{class_name} (
+            CREATE TABLE IF NOT EXISTS {class_name}_names (
                 RollNo INTEGER PRIMARY KEY,
                 Name TEXT
             )
@@ -235,9 +235,9 @@ class MainPage:
         self.conn.commit()
 
         create_attendance_table_query = f'''
-            CREATE TABLE IF NOT EXISTS attendance_{class_name} (
+            CREATE TABLE IF NOT EXISTS {class_name}_attendance (
                 RollNo INTEGER,
-                FOREIGN KEY(RollNo) REFERENCES names_{class_name} (RollNo)
+                FOREIGN KEY(RollNo) REFERENCES {class_name}_names (RollNo)
             )
         '''
         self.cursor.execute(create_attendance_table_query)
@@ -262,8 +262,8 @@ class MainPage:
             if 0 <= index < len(classes):
                 class_name = classes[index][0]
                 self.cursor.execute(f"DELETE FROM RecordList WHERE Class='{class_name}'")
-                self.cursor.execute(f'DROP TABLE names_{class_name}')
-                self.cursor.execute(f'DROP TABLE attendance_{class_name}')
+                self.cursor.execute(f'DROP TABLE {class_name}_names')
+                self.cursor.execute(f'DROP TABLE {class_name}_attendance')
                 self.conn.commit()
                 messagebox.showinfo("Success", f"Class '{class_name}' removed successfully.")
                 self.home_frame.destroy()
