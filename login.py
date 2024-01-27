@@ -39,8 +39,8 @@ class Login:
         self.root.title("Login")
         self.root.geometry("450x250") # 450 x 250
 
-        self.main_db = DatabaseManager('Credentials.db')
-        self.create_main_table()
+        self.database = DatabaseManager('Database.db')
+        self.create_user_table()
 
         self.create_login_page()
 
@@ -53,15 +53,10 @@ class Login:
 
         return encrypted_password
 
-    def create_main_table(self):
-        columns = "username TEXT PRIMARY KEY, password TEXT"
-        self.main_db.create_table('Users', columns)
+    def create_user_table(self):
+        columns = "user_id INTEGER PRIMARY KEY AUTOINCREMENT, username TEXT NOT NULL, password TEXT NOT NULL"
+        self.database.create_table('users', columns)
 
-    def create_user_db(self, username):
-        db_name = f"{username}.db"
-        user_db = DatabaseManager(db_name)
-        user_db.create_table('RecordList', 'id INTEGER PRIMARY KEY, Class TEXT')
-        user_db.close_connection()
 
     def submit(self):
         new_username = self.entry_new_username.get()
@@ -69,22 +64,21 @@ class Login:
         enc_password = self.encrypt_password(new_password)
 
         query = 'SELECT * FROM Users WHERE username=?'
-        existing_user = self.main_db.fetch_all(query, (new_username,))
+        existing_user = self.database.fetch_all(query, (new_username,))
 
         if existing_user:
             messagebox.showerror("Username Exists", "Username already exists. Try logging in instead.")
         else:
-            self.main_db.execute_query('INSERT INTO Users VALUES (?, ?)', (new_username, enc_password))
+            self.database.execute_query('INSERT INTO users (username, password) VALUES (?, ?)', (new_username, enc_password))
             messagebox.showinfo("Success", "User Added")
-            self.create_user_db(new_username)
 
     def login_conn(self):
         entered_username = self.entry_username.get()
         entered_password = self.entry_password.get()
         enc_password = self.encrypt_password(entered_password)
 
-        query = 'SELECT * FROM Users WHERE username=? AND password=?'
-        user = self.main_db.fetch_all(query, (entered_username, enc_password))
+        query = 'SELECT * FROM users WHERE username=? AND password=?'
+        user = self.database.fetch_all(query, (entered_username, enc_password))
         if user:
             messagebox.showinfo("Login", f"Welcome, {entered_username}!")
             self.root.destroy()
@@ -94,27 +88,25 @@ class Login:
             messagebox.showerror("Login Error", "Credentials don't match")
 
     def remove_user(self):
-        selected_index = int(self.entry_index.get())
+        selected_user_id = int(self.entry_index.get())
 
-        conn = sqlite3.connect('Credentials.db')
+        conn = sqlite3.connect('Database.db')
         cursor = conn.cursor()
 
-        cursor.execute('SELECT * FROM Users')
+        cursor.execute('SELECT * FROM users')
         users = cursor.fetchall()
 
-        if selected_index >= 0 and selected_index < len(users):
-            username_to_remove = users[selected_index][0]
-            cursor.execute('DELETE FROM Users WHERE username=?', (username_to_remove,))
+        if any(user[0] == selected_user_id for user in users):
+            cursor.execute('DELETE FROM users WHERE user_id=?', (selected_user_id,))
             conn.commit()
-            os.remove(f"{username_to_remove}.db")
-            messagebox.showinfo("Success", f"User '{username_to_remove}' removed successfully.")
+            messagebox.showinfo("Success", f"User with user_id {selected_user_id} removed successfully.")
             self.remove_frame.destroy()
             self.create_remove_page()
-
         else:
-            messagebox.showerror("Error", "Invalid index")
+            messagebox.showerror("Error", "Invalid user_id")
 
         conn.close()
+
 
     def create_login_page(self):
         if hasattr(self, 'remove_frame'):
@@ -184,16 +176,17 @@ class Login:
         self.remove_frame = tk.Frame(self.root)
         self.remove_frame.pack(fill=tk.BOTH, expand=True)
 
-        label_instructions = tk.Label(self.remove_frame, text="Enter index of user to remove:")
+        label_instructions = tk.Label(self.remove_frame, text="Enter user_id of user to remove:")
         label_instructions.pack()
 
-        conn = sqlite3.connect('Credentials.db')
+        conn = sqlite3.connect('Database.db')
         cursor = conn.cursor()
-        cursor.execute('SELECT * FROM Users')
+        cursor.execute('SELECT * FROM users')
         users = cursor.fetchall()
 
-        for index, user in enumerate(users):
-            tk.Label(self.remove_frame, text=f"{index}: {user[0]}").pack()
+        for user in users:
+            label_text = f"{user[0]}: {user[1]}"
+            tk.Label(self.remove_frame, text=label_text).pack()
 
         self.entry_index = tk.Entry(self.remove_frame)
         self.entry_index.pack()
@@ -205,6 +198,7 @@ class Login:
         button_return_login.pack()
 
         conn.close()
+
 
 
 display_instance = Login()
