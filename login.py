@@ -1,7 +1,6 @@
 import tkinter as tk
 from tkinter import messagebox
 import sqlite3
-import os
 import hashlib
 from homepage import MainPage
 
