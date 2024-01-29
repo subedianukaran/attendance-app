@@ -57,8 +57,13 @@ class ClassHomePage:
 
                 for name in student_list:
                     if name:
+                        self.cursor.execute('SELECT student_id FROM students WHERE student_name = ?', (name,))
+                        student_id = self.cursor.fetchone()[0]
                         self.cursor.execute(
-                            f"DELETE FROM students WHERE student_name = ?", (name,)
+                            f"DELETE FROM students WHERE student_id = ?", (student_id,)
+                        )
+                        self.cursor.execute(
+                            f"DELETE FROM class_student WHERE student_id = ?", (student_id,)
                         )
                         if self.cursor.rowcount == 0:
                             students_not_found.append(name)
@@ -109,11 +114,11 @@ class ClassHomePage:
                         )
                         self.conn.commit()
                         self.cursor.execute(
-                    """INSERT INTO class_student (class_id, student_id)
-    VALUES ((SELECT class_id FROM classes WHERE class_name = ?), (SELECT student_id FROM students WHERE student_name = ?));
-""",
-                    (self.class_name, name),
-                )
+                            """INSERT INTO class_student (class_id, student_id)
+                                VALUES ((SELECT class_id FROM classes WHERE class_name = ?), (SELECT student_id FROM students WHERE student_name = ?));
+                            """,
+                            (self.class_name, name),
+                        )
 
                 messagebox.showinfo("Success", "Students added successfully.")
 
@@ -237,7 +242,10 @@ class MainPage:
                 self.home_page()
 
     def display_classes(self):
-        self.cursor.execute("SELECT class_name FROM classes INNER JOIN user_class ON classes.class_id = user_class.class_id WHERE user_class.user_id = ?", (self.user_id,))
+        self.cursor.execute(
+            "SELECT class_name FROM classes INNER JOIN user_class ON classes.class_id = user_class.class_id WHERE user_class.user_id = ?",
+            (self.user_id,),
+        )
         classes = self.cursor.fetchall()
 
         for class_name in classes:
@@ -249,25 +257,29 @@ class MainPage:
                 height=2,
             ).pack(padx=5, pady=5)
 
-
-
     def remove_class(self):
         selected_class_id = int(self.rentry_index.get())
-        
-        self.cursor.execute('SELECT * FROM classes INNER JOIN user_class on classes.class_id = user_class.class_id WHERE user_class.user_id = ?', (self.user_id,))
+
+        self.cursor.execute(
+            "SELECT * FROM classes INNER JOIN user_class on classes.class_id = user_class.class_id WHERE user_class.user_id = ?",
+            (self.user_id,),
+        )
         classes = self.cursor.fetchall()
 
         for classvar in classes:
             if classvar[0] == selected_class_id:
 
-                self.cursor.execute("DELETE FROM classes WHERE class_id=?", (selected_class_id,))
+                self.cursor.execute(
+                    "DELETE FROM classes WHERE class_id=?", (selected_class_id,)
+                )
                 self.conn.commit()
-                self.cursor.execute("DELETE FROM user_class WHERE class_id=?", (selected_class_id,))
+                self.cursor.execute(
+                    "DELETE FROM user_class WHERE class_id=?", (selected_class_id,)
+                )
                 self.conn.commit()
-            # left to remove students from those classes
+                # left to remove students from those classes
                 self.removeclass_frame.destroy()
                 self.remove_class_page()
-      
 
     def remove_class_page(self):
         if hasattr(self, "removeclass_frame"):
@@ -283,7 +295,10 @@ class MainPage:
         )
         label_instructions.pack()
 
-        self.cursor.execute("SELECT * FROM classes INNER JOIN user_class ON classes.class_id = user_class.class_id where user_id = ?", (self.user_id,)) #select classes.* to *
+        self.cursor.execute(
+            "SELECT * FROM classes INNER JOIN user_class ON classes.class_id = user_class.class_id where user_id = ?",
+            (self.user_id,),
+        )  # select classes.* to *
         classes = self.cursor.fetchall()
 
         for classvar in classes:
@@ -300,17 +315,9 @@ class MainPage:
         button_remove.pack()
 
         button_return_page = tk.Button(
-            self.removeclass_frame,
-            text="Back",
-            command=lambda: self.home_page()
+            self.removeclass_frame, text="Back", command=lambda: self.home_page()
         )
         button_return_page.pack()
-
-
-
-
-    def check_class_exists(self, class_name):
-        pass
 
     def class_details(self, class_name):
         self.home_frame.destroy()
