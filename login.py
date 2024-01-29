@@ -39,10 +39,12 @@ class Login:
         self.root = tk.Tk()
         self.root.title("Login")
         self.root.geometry("450x250")  # 450 x 250
-
         self.database = DatabaseManager("Database.db")
+        self.conn = sqlite3.connect("Database.db")
+        self.cursor = self.conn.cursor()
         self.create_user_table()
-
+        self.cursor.execute('CREATE TABLE IF NOT EXISTS users (user_id INTEGER PRIMARY KEY AUTOINCREMENT, username VARCHAR(255), password VARCHAR(255))')
+        self.conn.commit()
         self.create_login_page()
 
     def encrypt_password(self, password):
@@ -55,8 +57,8 @@ class Login:
         return encrypted_password
 
     def create_user_table(self):
-        columns = "user_id INTEGER PRIMARY KEY AUTOINCREMENT, username VARCHAR(255), password VARCHAR(255)"
-        self.database.create_table("users", columns)
+        self.cursor.execute('CREATE TABLE IF NOT EXISTS users (user_id INTEGER PRIMARY KEY AUTOINCREMENT, username VARCHAR(255), password VARCHAR(255))')
+        self.conn.commit()
 
     def submit(self):
         new_username = self.entry_new_username.get()
@@ -87,7 +89,12 @@ class Login:
         if user:
             messagebox.showinfo("Login", f"Welcome, {entered_username}!")
             self.root.destroy()
-            homepage = MainPage(entered_username)
+            
+            self.cursor.execute('SELECT user_id FROM users WHERE username = ?', (entered_username,))
+            user_id = self.cursor.fetchone()[0]
+            print(user_id)
+
+            homepage = MainPage(user_id)
             homepage.root.mainloop()
         else:
             messagebox.showerror("Login Error", "Credentials don't match")

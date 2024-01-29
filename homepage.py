@@ -108,6 +108,12 @@ class ClassHomePage:
                             f"INSERT INTO students(student_name) VALUES (?)", (name,)
                         )
                         self.conn.commit()
+                        self.cursor.execute(
+                    """INSERT INTO class_student (class_id, student_id)
+    VALUES ((SELECT class_id FROM classes WHERE class_name = ?), (SELECT student_id FROM students WHERE student_name = ?));
+""",
+                    (self.class_name, name),
+                )
 
                 messagebox.showinfo("Success", "Students added successfully.")
 
@@ -173,13 +179,13 @@ class ClassHomePage:
 
 
 class MainPage:
-    def __init__(self, username):
+    def __init__(self, user_id):
         self.root = tk.Tk()
         self.root.title("Attendance Application")
         self.root.geometry("600x450")
         self.conn = sqlite3.connect("Database.db")
         self.cursor = self.conn.cursor()
-        self.username = username
+        self.user_id = user_id
         self.cursor.execute("")
         self.cursor.execute(
             "CREATE TABLE IF NOT EXISTS classes (class_id INTEGER PRIMARY KEY AUTOINCREMENT, class_name VARCHAR(255));"
@@ -219,9 +225,9 @@ class MainPage:
                 self.conn.commit()
                 self.cursor.execute(
                     """INSERT INTO user_class (user_id, class_id)
-    VALUES ((SELECT user_id FROM users WHERE username = ?), (SELECT class_id FROM classes WHERE class_name = ?));
+    VALUES ((?), (SELECT class_id FROM classes WHERE class_name = ?));
 """,
-                    (self.username, self.new_class_name),
+                    (self.user_id, self.new_class_name),
                 )
                 self.conn.commit()
                 messagebox.showinfo(
@@ -231,7 +237,7 @@ class MainPage:
                 self.home_page()
 
     def display_classes(self):
-        self.cursor.execute("SELECT class_name FROM classes")
+        self.cursor.execute("SELECT class_name FROM classes INNER JOIN user_class ON classes.class_id = user_class.class_id WHERE user_class.user_id = ?", (self.user_id,))
         classes = self.cursor.fetchall()
 
         for class_name in classes:
@@ -243,8 +249,65 @@ class MainPage:
                 height=2,
             ).pack(padx=5, pady=5)
 
+
+
     def remove_class(self):
-        pass
+        selected_class_id = int(self.rentry_index.get())
+        
+        self.cursor.execute('SELECT * FROM classes INNER JOIN user_class on classes.class_id = user_class.class_id WHERE user_class.user_id = ?', (self.user_id,))
+        classes = self.cursor.fetchall()
+
+        for classvar in classes:
+            if classvar[0] == selected_class_id:
+
+                self.cursor.execute("DELETE FROM classes WHERE class_id=?", (selected_class_id,))
+                self.conn.commit()
+                self.cursor.execute("DELETE FROM user_class WHERE class_id=?", (selected_class_id,))
+                self.conn.commit()
+            # left to remove students from those classes
+                self.removeclass_frame.destroy()
+                self.remove_class_page()
+      
+
+    def remove_class_page(self):
+        if hasattr(self, "removeclass_frame"):
+            self.removeclass_frame.pack_forget()
+        if hasattr(self, "home_frame"):
+            self.home_frame.pack_forget()
+
+        self.removeclass_frame = tk.Frame(self.root)
+        self.removeclass_frame.pack(fill=tk.BOTH, expand=True)
+
+        label_instructions = tk.Label(
+            self.removeclass_frame, text="Enter class_id of class to remove:"
+        )
+        label_instructions.pack()
+
+        self.cursor.execute("SELECT * FROM classes INNER JOIN user_class ON classes.class_id = user_class.class_id where user_id = ?", (self.user_id,)) #select classes.* to *
+        classes = self.cursor.fetchall()
+
+        for classvar in classes:
+            label_text = f"{classvar[0]}: {classvar[1]}"
+            print(classvar[0])
+            tk.Label(self.removeclass_frame, text=label_text).pack()
+
+        self.rentry_index = tk.Entry(self.removeclass_frame)
+        self.rentry_index.pack()
+
+        button_remove = tk.Button(
+            self.removeclass_frame, text="Remove", command=lambda: self.remove_class()
+        )
+        button_remove.pack()
+
+        button_return_page = tk.Button(
+            self.removeclass_frame,
+            text="Back",
+            command=lambda: self.home_page()
+        )
+        button_return_page.pack()
+
+
+
 
     def check_class_exists(self, class_name):
         pass
@@ -255,6 +318,8 @@ class MainPage:
         class_page.classpage()
 
     def home_page(self):
+        if hasattr(self, "removeclass_frame"):
+            self.removeclass_frame.pack_forget()
         self.home_frame = tk.Frame(self.root)
         self.home_frame.pack(fill=tk.BOTH, expand=True)
 
@@ -274,6 +339,6 @@ class MainPage:
         self.add_class_button.pack(side=tk.LEFT, padx=10)
 
         self.remove_class_button = tk.Button(
-            button_frame, text="Remove Class", command=self.remove_class
+            button_frame, text="Remove Class", command=self.remove_class_page
         )
         self.remove_class_button.pack(side=tk.RIGHT, padx=10)
