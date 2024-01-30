@@ -14,12 +14,10 @@ class AttendanceManager:
         self.cursor.execute(
             "CREATE TABLE IF NOT EXISTS attendance (attendance_id INTEGER PRIMARY KEY AUTOINCREMENT, student_id INTEGER, attendance_date DATE, status BOOLEAN, FOREIGN KEY (student_id) REFERENCES students(student_id));"
         )
-        self.cursor.commit()
-        self.attroot = tk.Tk()
-        self.attroot.title("Take Attendance")
-        
-
-
+        self.conn.commit()
+        self.att_page = tk.Tk()
+        self.att_page.title("Attendance Window ")
+        self.att_page.geometry("1000x850")
         self.take_attendance()
 
     def take_attendance(self):
@@ -38,9 +36,8 @@ class ClassHomePage:
         self.root = root
         self.cursor = cursor
         self.conn = conn
-
-    def take_attendance(self):
-        attendance = AttendanceManager(self.conn,self.class_id)
+        self.cursor.execute(f"SELECT class_id FROM classes WHERE class_name = ?", (self.class_name,))
+        self.class_id = self.cursor.fetchone()[0]
 
     def edit_records(self):
         pass
@@ -114,9 +111,11 @@ class ClassHomePage:
         )
         remove_button.pack()
 
+    def take_attendance(self):
+        attendance = AttendanceManager(self.conn,self.class_id)
+        attendance.take_attendance()
+
     def add_students(self):
-        self.cursor.execute(f"SELECT class_id FROM classes WHERE class_name = ?", (self.class_name,))
-        self.class_id = self.cursor.fetchone()[0]
         def add_students_d():
             student_names = student_entry.get()
             student_window.destroy()
