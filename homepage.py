@@ -6,11 +6,19 @@ from datetime import datetime
 
 
 class AttendanceManager:
-    def __init__(self, conn, class_name):
+    def __init__(self, conn, class_id):
 
-        self.class_name = class_name
+        self.class_id = class_id
         self.conn = conn
         self.cursor = self.conn.cursor()
+        self.cursor.execute(
+            "CREATE TABLE IF NOT EXISTS attendance (attendance_id INTEGER PRIMARY KEY AUTOINCREMENT, student_id INTEGER, attendance_date DATE, status BOOLEAN, FOREIGN KEY (student_id) REFERENCES students(student_id));"
+        )
+        self.cursor.commit()
+        self.attroot = tk.Tk()
+        self.attroot.title("Take Attendance")
+        
+
 
         self.take_attendance()
 
@@ -32,7 +40,7 @@ class ClassHomePage:
         self.conn = conn
 
     def take_attendance(self):
-        pass
+        attendance = AttendanceManager(self.conn,self.class_id)
 
     def edit_records(self):
         pass
@@ -57,14 +65,23 @@ class ClassHomePage:
 
                 for name in student_list:
                     if name:
-                        self.cursor.execute('SELECT student_id FROM students WHERE student_name = ?', (name,))
+                        self.cursor.execute(
+                            "SELECT student_id FROM students WHERE student_name = ?",
+                            (name,)
+                        )
                         student_id = self.cursor.fetchone()[0]
+                        print('student_id is updated')
+                        print(student_id)
+                        self.conn.commit()
                         self.cursor.execute(
                             f"DELETE FROM students WHERE student_id = ?", (student_id,)
                         )
+                        self.conn.commit()
                         self.cursor.execute(
-                            f"DELETE FROM class_student WHERE student_id = ?", (student_id,)
+                            f"DELETE FROM class_student WHERE student_id = ?",
+                            (student_id,)
                         )
+                        self.conn.commit()
                         if self.cursor.rowcount == 0:
                             students_not_found.append(name)
 
@@ -97,10 +114,9 @@ class ClassHomePage:
         )
         remove_button.pack()
 
-    def edit_students(self):
-        pass
-
     def add_students(self):
+        self.cursor.execute(f"SELECT class_id FROM classes WHERE class_name = ?", (self.class_name,))
+        self.class_id = self.cursor.fetchone()[0]
         def add_students_d():
             student_names = student_entry.get()
             student_window.destroy()
@@ -110,17 +126,22 @@ class ClassHomePage:
                 for name in student_list:
                     if name:
                         self.cursor.execute(
-                            f"INSERT INTO students(student_name) VALUES (?)", (name,)
+                            f"INSERT INTO students (student_name) VALUES (?)", (name,)
                         )
                         self.conn.commit()
+                        self.cursor.execute(f"SELECT student_id FROM students WHERE student_name = ?", (name,))
+                        self.student_id = self.cursor.fetchone()[0]
+                        print(self.student_id)
                         self.cursor.execute(
-                            """INSERT INTO class_student (class_id, student_id)
-                                VALUES ((SELECT class_id FROM classes WHERE class_name = ?), (SELECT student_id FROM students WHERE student_name = ?));
+                            f"""INSERT INTO class_student (class_id, student_id)
+                                VALUES (?, ?);
                             """,
-                            (self.class_name, name),
+                            (self.class_id, self.student_id),
                         )
+                        self.conn.commit()
 
                 messagebox.showinfo("Success", "Students added successfully.")
+
 
             except sqlite3.Error as e:
                 messagebox.showerror("Database Error", f"Error: {e}")
@@ -191,7 +212,6 @@ class MainPage:
         self.conn = sqlite3.connect("Database.db")
         self.cursor = self.conn.cursor()
         self.user_id = user_id
-        self.cursor.execute("")
         self.cursor.execute(
             "CREATE TABLE IF NOT EXISTS classes (class_id INTEGER PRIMARY KEY AUTOINCREMENT, class_name VARCHAR(255));"
         )
@@ -298,7 +318,7 @@ class MainPage:
         self.cursor.execute(
             "SELECT * FROM classes INNER JOIN user_class ON classes.class_id = user_class.class_id where user_id = ?",
             (self.user_id,),
-        )  # select classes.* to *
+        )  
         classes = self.cursor.fetchall()
 
         for classvar in classes:

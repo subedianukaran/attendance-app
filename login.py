@@ -92,7 +92,6 @@ class Login:
             
             self.cursor.execute('SELECT user_id FROM users WHERE username = ?', (entered_username,))
             user_id = self.cursor.fetchone()[0]
-            print(user_id)
 
             homepage = MainPage(user_id)
             homepage.root.mainloop()
