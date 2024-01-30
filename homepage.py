@@ -20,6 +20,7 @@ class AttendanceManager:
         self.att_page.geometry("1000x850")
         self.take_attendance()
 
+
     def take_attendance(self):
         pass
 
