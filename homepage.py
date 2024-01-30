@@ -1,8 +1,9 @@
 import tkinter as tk
 from tkinter import messagebox
+from tkinter.ttk import *
 import sqlite3
 from tkinter import simpledialog
-from datetime import datetime
+from datetime import date
 
 
 class AttendanceManager:
@@ -18,11 +19,15 @@ class AttendanceManager:
         self.att_page = tk.Tk()
         self.att_page.title("Attendance Window ")
         self.att_page.geometry("1000x850")
-        self.take_attendance()
+        self.take_attendance
 
 
     def take_attendance(self):
-        pass
+        self.date = date.today()
+        print(self.date)
+        self.cursor.execute(f"SELECT class_student.student_id, students.student_name FROM students INNER JOIN class_student ON students.student_id = class_student.student_id WHERE class_student.class_id= ?", (self.class_id,))
+        self.students = self.cursor.fetchall()
+        print(self.students)
 
     def show_attendance(self, student, date):
         pass
@@ -32,13 +37,24 @@ class AttendanceManager:
 
 
 class ClassHomePage:
-    def __init__(self, class_name, root, cursor, conn):
+    def __init__(self, class_name, root, cursor, conn, user_id):
         self.class_name = class_name
+        self.user_id = user_id
         self.root = root
         self.cursor = cursor
         self.conn = conn
         self.cursor.execute(f"SELECT class_id FROM classes WHERE class_name = ?", (self.class_name,))
         self.class_id = self.cursor.fetchone()[0]
+
+    def wipepage(self):
+        if hasattr(self, "viewstd_frame"):
+            self.viewstd_frame.pack_forget()
+        if hasattr(self, "class_frame"):
+            self.class_frame.pack_forget()
+        if hasattr(self, "home_frame"):
+            self.home_frame.pack_forget()
+        if hasattr(self, "removeclass_frame"):
+            self.removeclass_frame.pack_forget()
 
     def edit_records(self):
         pass
@@ -50,7 +66,51 @@ class ClassHomePage:
         pass
 
     def view_students(self):
-        pass
+        self.wipepage()
+        self.viewstd_frame = tk.Frame(self.root)
+        self.viewstd_frame.pack(fill=tk.BOTH, expand=True)
+        self.title_label = tk.Label(self.viewstd_frame, text= "")
+        self.title_label.pack()
+        self.title_label = tk.Label(self.viewstd_frame, text= "Students Data", font=("Arial", 15, "bold"))
+        self.title_label.pack()
+
+        self.cursor.execute(f"SELECT class_student.student_id, students.student_name FROM students INNER JOIN class_student ON students.student_id = class_student.student_id WHERE class_student.class_id= ?", (self.class_id,))
+        self.students = self.cursor.fetchall()
+
+        # Create a treeview
+        self.tree = tk.ttk.Treeview(self.viewstd_frame, columns=('ID', 'Name'), show='headings')
+
+        # Define column headings
+        self.tree.heading('ID', text='Student ID')
+        self.tree.heading('Name', text='Name')
+
+        # Add data to the treeview
+        for student in self.students:
+            self.tree.insert('', 'end', values=student)
+
+        # Pack the treeview
+        self.tree.pack()
+
+        button_frame = tk.Frame(self.viewstd_frame)
+        button_frame.pack(side=tk.BOTTOM, fill=tk.X, pady=10)
+
+        self.add_class_button = tk.Button(
+            button_frame, text="Add Students", command=self.add_students
+        )
+        self.add_class_button.pack(side=tk.LEFT, padx=10)
+
+        self.remove_class_button = tk.Button(
+            button_frame, text="Remove Students", command=self.remove_students
+        )
+        self.remove_class_button.pack(side=tk.RIGHT, padx=10)
+        self.button_back = tk.Button(
+            self.viewstd_frame,
+            text="Back",
+            command=lambda: self.classpage(),
+        )
+        self.button_back.pack(pady=10)
+
+
 
     def remove_students(self):
         def remove_students():
@@ -84,6 +144,9 @@ class ClassHomePage:
                             students_not_found.append(name)
 
                 self.conn.commit()
+
+                self.viewstd_frame.pack_forget()
+                self.view_students()
 
                 if students_not_found:
                     messagebox.showwarning(
@@ -141,6 +204,8 @@ class ClassHomePage:
                         self.conn.commit()
 
                 messagebox.showinfo("Success", "Students added successfully.")
+                self.viewstd_frame.pack_forget()
+                self.view_students()
 
 
             except sqlite3.Error as e:
@@ -161,6 +226,7 @@ class ClassHomePage:
         add_button.pack()
 
     def classpage(self):
+        self.wipepage()
         self.class_frame = tk.Frame(self.root)
         self.class_frame.pack(fill=tk.BOTH, expand=True)
 
@@ -176,8 +242,6 @@ class ClassHomePage:
             "View Statistics",
             "Delete Records",
             "View Students",
-            "Add Students",
-            "Remove Students",
         ]
         button_commands = [
             self.take_attendance,
@@ -185,8 +249,6 @@ class ClassHomePage:
             self.view_statistics,
             self.delete_records,
             self.view_students,
-            self.add_students,
-            self.remove_students,
         ]
 
         for i in range(0, len(button_texts), 2):
@@ -227,6 +289,16 @@ class MainPage:
         )
         self.conn.commit()
         self.home_page()
+
+    def wipepage(self):
+        if hasattr(self, "home_frame"):
+            self.home_frame.pack_forget()
+        if hasattr(self, "viewstd_frame"):
+            self.viewstd_frame.pack_forget()
+        if hasattr(self, "class_frame"):
+            self.class_frame.pack_forget()
+        if hasattr(self, "removeclass_frame"):
+            self.removeclass_frame.pack_forget()
 
     def add_new_class(self):
         self.new_class_name = tk.simpledialog.askstring(
@@ -302,10 +374,7 @@ class MainPage:
                 self.remove_class_page()
 
     def remove_class_page(self):
-        if hasattr(self, "removeclass_frame"):
-            self.removeclass_frame.pack_forget()
-        if hasattr(self, "home_frame"):
-            self.home_frame.pack_forget()
+        self.wipepage()
 
         self.removeclass_frame = tk.Frame(self.root)
         self.removeclass_frame.pack(fill=tk.BOTH, expand=True)
@@ -340,13 +409,11 @@ class MainPage:
         button_return_page.pack()
 
     def class_details(self, class_name):
-        self.home_frame.destroy()
-        class_page = ClassHomePage(class_name, self.root, self.cursor, self.conn)
+        self.wipepage()
+        class_page = ClassHomePage(class_name, self.root, self.cursor, self.conn, self.user_id)
         class_page.classpage()
 
     def home_page(self):
-        if hasattr(self, "removeclass_frame"):
-            self.removeclass_frame.pack_forget()
         self.home_frame = tk.Frame(self.root)
         self.home_frame.pack(fill=tk.BOTH, expand=True)
 

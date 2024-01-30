@@ -3,8 +3,6 @@ from tkinter import messagebox
 import sqlite3
 import hashlib
 from homepage import MainPage
-from homepage import ClassHomePage
-from homepage import AttendanceManager
 
 
 class DatabaseManager:
@@ -43,7 +41,9 @@ class Login:
         self.conn = sqlite3.connect("Database.db")
         self.cursor = self.conn.cursor()
         self.create_user_table()
-        self.cursor.execute('CREATE TABLE IF NOT EXISTS users (user_id INTEGER PRIMARY KEY AUTOINCREMENT, username VARCHAR(255), password VARCHAR(255))')
+        self.cursor.execute(
+            "CREATE TABLE IF NOT EXISTS users (user_id INTEGER PRIMARY KEY AUTOINCREMENT, username VARCHAR(255), password VARCHAR(255))"
+        )
         self.conn.commit()
         self.create_login_page()
 
@@ -57,7 +57,9 @@ class Login:
         return encrypted_password
 
     def create_user_table(self):
-        self.cursor.execute('CREATE TABLE IF NOT EXISTS users (user_id INTEGER PRIMARY KEY AUTOINCREMENT, username VARCHAR(255), password VARCHAR(255))')
+        self.cursor.execute(
+            "CREATE TABLE IF NOT EXISTS users (user_id INTEGER PRIMARY KEY AUTOINCREMENT, username VARCHAR(255), password VARCHAR(255))"
+        )
         self.conn.commit()
 
     def submit(self):
@@ -89,8 +91,10 @@ class Login:
         if user:
             messagebox.showinfo("Login", f"Welcome, {entered_username}!")
             self.root.destroy()
-            
-            self.cursor.execute('SELECT user_id FROM users WHERE username = ?', (entered_username,))
+
+            self.cursor.execute(
+                "SELECT user_id FROM users WHERE username = ?", (entered_username,)
+            )
             user_id = self.cursor.fetchone()[0]
 
             homepage = MainPage(user_id)
@@ -143,7 +147,7 @@ class Login:
         button_login = tk.Button(
             self.login_frame, text="Login", command=lambda: self.login_conn()
         )
-        button_login.pack()
+        button_login.pack(pady=10)
 
         label_new_user = tk.Label(self.login_frame, text="New User?")
         label_new_user.pack(side=tk.LEFT)
@@ -184,14 +188,14 @@ class Login:
         button_submit = tk.Button(
             self.signup_frame, text="Submit", command=lambda: self.submit()
         )
-        button_submit.pack()
+        button_submit.pack(pady=10)
 
         button_return_login = tk.Button(
             self.signup_frame,
             text="Return to Login Page",
             command=lambda: self.create_login_page(),
         )
-        button_return_login.pack()
+        button_return_login.pack(pady=10)
 
     def create_remove_page(self):
         if hasattr(self, "remove_frame"):
@@ -222,14 +226,14 @@ class Login:
         button_remove = tk.Button(
             self.remove_frame, text="Remove", command=lambda: self.remove_user()
         )
-        button_remove.pack()
+        button_remove.pack(pady=10)
 
         button_return_login = tk.Button(
             self.remove_frame,
             text="Return to Login Page",
             command=lambda: self.create_login_page(),
         )
-        button_return_login.pack()
+        button_return_login.pack(pady=10)
 
         conn.close()
 
