@@ -1,24 +1,21 @@
 import tkinter as tk
 from tkinter import messagebox
-from tkinter.ttk import *
 import sqlite3
 from tkinter import simpledialog
 from datetime import date
 
 
 class AttendanceManager:
-    def __init__(self, conn, class_id):
+    def __init__(self,root,conn, class_id):
 
         self.class_id = class_id
+        self.root = root
         self.conn = conn
         self.cursor = self.conn.cursor()
         self.cursor.execute(
             "CREATE TABLE IF NOT EXISTS attendance (attendance_id INTEGER PRIMARY KEY AUTOINCREMENT, student_id INTEGER, attendance_date DATE, status BOOLEAN, FOREIGN KEY (student_id) REFERENCES students(student_id));"
         )
         self.conn.commit()
-        self.att_page = tk.Tk()
-        self.att_page.title("Attendance Window ")
-        self.att_page.geometry("1000x850")
         self.take_attendance
 
 
@@ -27,13 +24,45 @@ class AttendanceManager:
         print(self.date)
         self.cursor.execute(f"SELECT class_student.student_id, students.student_name FROM students INNER JOIN class_student ON students.student_id = class_student.student_id WHERE class_student.class_id= ?", (self.class_id,))
         self.students = self.cursor.fetchall()
-        print(self.students)
 
-    def show_attendance(self, student, date):
-        pass
+        self.attendance_window = tk.TopLevel(self.root)
+        self.attendance_window.title(f"Attendance for {self.date}")
+        self.current_student = 0
+        self.show_attendance(self.students[self.current_student])
 
-    def mark_attendance(self, date, roll_no, status):
-        pass
+
+    def show_attendance(self, student):
+        self.id_label = tk.Label(self.attendance_window, text = f"{self.students[0]}")
+        self.id_label.pack()
+
+        self.name_label = tk.Label(self.attendance_window, text = f"{self.students[1]}")
+        self.name_label.pack()
+
+        self.present_button = tk.Button(self.attendance_window, text="Present", command=lambda: self.mark_attendance(self.date, student[0], "Present"))
+        self.present_button.pack()
+
+        self.absent_button = tk.Button(self.attendance_window, text="Absent", command=lambda: self.mark_attendance(self.date, student[0], "Absent"))
+        self.absent_button.pack()
+
+        
+
+    def mark_attendance(self,student_id, val):
+        if val=="Present":
+            status = True
+        elif val=="Absent":
+            status = False
+
+        self.cursor.execute(f"INSERT INTO attendance (student_id, attendance_date, status) VALUES (?,?,?)", (student_id, self.date, status,))
+        self.conn.commit()
+
+        self.current_student +=1
+
+        if self.current_student < len(self.students):
+            self.show_attendance(self.students[self.current_student])
+        else:
+            messagebox.showinfo("Info", "Attendance taken for all students.")
+            self.attendance_window.destroy()
+
 
 
 class ClassHomePage:
@@ -176,7 +205,7 @@ class ClassHomePage:
         remove_button.pack()
 
     def take_attendance(self):
-        attendance = AttendanceManager(self.conn,self.class_id)
+        attendance = AttendanceManager(self.root,self.conn,self.class_id)
         attendance.take_attendance()
 
     def add_students(self):
