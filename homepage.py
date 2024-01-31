@@ -27,7 +27,6 @@ class AttendanceManager:
         print(self.date)
         self.cursor.execute(f"SELECT class_student.student_id, students.student_name FROM students INNER JOIN class_student ON students.student_id = class_student.student_id WHERE class_student.class_id= ?", (self.class_id,))
         self.students = self.cursor.fetchall()
-        print(self.students)
 
     def show_attendance(self, student, date):
         pass
