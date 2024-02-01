@@ -4,6 +4,8 @@ from tkinter import ttk
 import sqlite3
 from tkinter import simpledialog
 from datetime import date
+import matplotlib.pyplot as plt
+from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 
 
 class AttendanceManager:
@@ -85,12 +87,12 @@ class ClassHomePage:
         self.class_name = class_name
         self.user_id = user_id
         self.root = root
+        self.date = date.today()
         self.cursor = cursor
         self.conn = conn
         self.conn.commit()
         self.cursor.execute(f"SELECT class_id FROM classes WHERE class_name = ?", (self.class_name,))
         self.class_id = self.cursor.fetchone()[0]
-
 
     def wipepage(self):
         if hasattr(self, "viewstd_frame"):
@@ -139,8 +141,8 @@ class ClassHomePage:
             self.cursor.execute('''
                 SELECT students.student_id, students.student_name, attendance.status 
                 FROM attendance 
-                INNER JOIN students ON attendance.student_id = students.student_id WHERE attendance.class_id = ?
-            ''', (self.class_id,))
+                INNER JOIN students ON attendance.student_id = students.student_id WHERE attendance.class_id = ? AND attendance.attendance_date = ?
+            ''', (self.class_id,self.date,))
             data = self.cursor.fetchall()
 
             for row in data:
@@ -185,7 +187,34 @@ class ClassHomePage:
 
 
     def view_statistics(self):
-        pass
+        self.cursor.execute(
+            "SELECT COUNT(*) FROM attendance WHERE class_id = ? AND attendance_date = ? AND status = 1",
+            (self.class_id, self.date),
+        )
+        present_count = self.cursor.fetchone()[0]
+        self.conn.commit()
+        self.cursor.execute(
+            "SELECT COUNT(*) FROM attendance WHERE class_id = ? AND attendance_date = ? AND status = 0",
+            (self.class_id, self.date),
+        )
+        absent_count = self.cursor.fetchone()[0]
+        self.conn.commit()
+        labels = ['Present', 'Absent']
+        sizes = [present_count, absent_count]
+
+        fig, ax = plt.subplots()
+        ax.pie(sizes, labels=labels, autopct='%1.1f%%', startangle=90)
+        ax.axis('equal')      
+        ax.set_title("Attendance Distribution", fontsize=16)
+
+        pie_chart_window = tk.Toplevel(self.root)
+        pie_chart_window.title("Attendance Pie Chart")
+        canvas = FigureCanvasTkAgg(fig, master=pie_chart_window)
+        canvas.get_tk_widget().pack()
+        canvas.draw()
+
+        plt.close(fig) 
+
 
     def manage_students(self):
         self.wipepage()
