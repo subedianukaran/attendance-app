@@ -1,5 +1,6 @@
 import tkinter as tk
 from tkinter import messagebox
+from tkinter import ttk
 import sqlite3
 from tkinter import simpledialog
 from datetime import date
@@ -21,28 +22,43 @@ class AttendanceManager:
 
     def take_attendance(self):
         self.date = date.today()
-        print(self.date)
-        self.cursor.execute(f"SELECT class_student.student_id, students.student_name FROM students INNER JOIN class_student ON students.student_id = class_student.student_id WHERE class_student.class_id= ?", (self.class_id,))
-        self.students = self.cursor.fetchall()
+        if self.date:
+            self.cursor.execute(
+                "SELECT 1 FROM attendance INNER JOIN class_student ON attendance.student_id = class_student.student_id WHERE class_student.class_id = ? AND attendance.attendance_date = ? LIMIT 1",
+                (self.class_id,self.date,),
+            )
+            self.conn.commit()
+            existing_date = self.cursor.fetchone()
+            if existing_date:
+                messagebox.showinfo("Attendance Taken", "Attendance already taken for today. Go to edit records to edit")
+            else:
+                self.cursor.execute(f"SELECT class_student.student_id, students.student_name FROM students INNER JOIN class_student ON students.student_id = class_student.student_id WHERE class_student.class_id= ?", (self.class_id,))
+                self.students = self.cursor.fetchall()
+                self.stdid_array=[item[0] for item in self.students]
+                self.stdname_array=[item[1] for item in self.students]
+       
+                self.attendance_window = tk.Toplevel()
+                self.attendance_window.geometry("300x200")
+                self.attendance_window.title(f"Attendance for {self.date}")
+                self.current_student = 0
+                self.show_attendance()
 
-        self.attendance_window = tk.TopLevel(self.root)
-        self.attendance_window.title(f"Attendance for {self.date}")
-        self.current_student = 0
-        self.show_attendance(self.students[self.current_student])
-
-    def show_attendance(self, student):
-        self.id_label = tk.Label(self.attendance_window, text = f"{self.students[0]}")
+    def show_attendance(self):
+        if hasattr(self, "attendance_frame"):
+            self.attendance_frame.pack_forget()
+        self.attendance_frame = tk.Frame(self.attendance_window)
+        self.attendance_frame.pack(fill=tk.BOTH, expand=True)
+        self.id_label = tk.Label(self.attendance_frame, text = f"Name: {self.stdid_array[self.current_student]}")
         self.id_label.pack()
 
-        self.name_label = tk.Label(self.attendance_window, text = f"{self.students[1]}")
+        self.name_label = tk.Label(self.attendance_frame, text = f"{self.stdname_array[self.current_student]}")
         self.name_label.pack()
 
-        self.present_button = tk.Button(self.attendance_window, text="Present", command=lambda: self.mark_attendance(self.date, student[0], "Present"))
-        self.present_button.pack()
+        self.present_button = tk.Button(self.attendance_frame, text="Present", command=lambda: self.mark_attendance(self.stdid_array[self.current_student], "Present"))
+        self.present_button.pack(side=tk.RIGHT, padx=20)
 
-        self.absent_button = tk.Button(self.attendance_window, text="Absent", command=lambda: self.mark_attendance(self.date, student[0], "Absent"))
-        self.absent_button.pack()
-
+        self.absent_button = tk.Button(self.attendance_frame, text="Absent", command=lambda: self.mark_attendance(self.stdid_array[self.current_student], "Absent"))
+        self.absent_button.pack(side=tk.LEFT, padx=20)
         
 
     def mark_attendance(self,student_id, val):
@@ -57,10 +73,10 @@ class AttendanceManager:
         self.current_student +=1
 
         if self.current_student < len(self.students):
-            self.show_attendance(self.students[self.current_student])
+            self.show_attendance()
         else:
-            messagebox.showinfo("Info", "Attendance taken for all students.")
             self.attendance_window.destroy()
+            messagebox.showinfo("Info", "Attendance taken for all students.")
 
 
 
@@ -71,6 +87,7 @@ class ClassHomePage:
         self.root = root
         self.cursor = cursor
         self.conn = conn
+        self.conn.commit()
         self.cursor.execute(f"SELECT class_id FROM classes WHERE class_name = ?", (self.class_name,))
         self.class_id = self.cursor.fetchone()[0]
 
@@ -90,10 +107,7 @@ class ClassHomePage:
     def view_statistics(self):
         pass
 
-    def delete_records(self):
-        pass
-
-    def view_students(self):
+    def manage_students(self):
         self.wipepage()
         self.viewstd_frame = tk.Frame(self.root)
         self.viewstd_frame.pack(fill=tk.BOTH, expand=True)
@@ -105,18 +119,14 @@ class ClassHomePage:
         self.cursor.execute(f"SELECT class_student.student_id, students.student_name FROM students INNER JOIN class_student ON students.student_id = class_student.student_id WHERE class_student.class_id= ?", (self.class_id,))
         self.students = self.cursor.fetchall()
 
-        # Create a treeview
         self.tree = tk.ttk.Treeview(self.viewstd_frame, columns=('ID', 'Name'), show='headings')
 
-        # Define column headings
         self.tree.heading('ID', text='Student ID')
         self.tree.heading('Name', text='Name')
 
-        # Add data to the treeview
         for student in self.students:
             self.tree.insert('', 'end', values=student)
 
-        # Pack the treeview
         self.tree.pack()
 
         button_frame = tk.Frame(self.viewstd_frame)
@@ -139,7 +149,6 @@ class ClassHomePage:
         self.button_back.pack(pady=10)
 
 
-
     def remove_students(self):
         def remove_students():
             student_names = student_entry.get()
@@ -156,8 +165,6 @@ class ClassHomePage:
                             (name,)
                         )
                         student_id = self.cursor.fetchone()[0]
-                        print('student_id is updated')
-                        print(student_id)
                         self.conn.commit()
                         self.cursor.execute(
                             f"DELETE FROM students WHERE student_id = ?", (student_id,)
@@ -174,7 +181,7 @@ class ClassHomePage:
                 self.conn.commit()
 
                 self.viewstd_frame.pack_forget()
-                self.view_students()
+                self.manage_students()
 
                 if students_not_found:
                     messagebox.showwarning(
@@ -222,7 +229,6 @@ class ClassHomePage:
                         self.conn.commit()
                         self.cursor.execute(f"SELECT student_id FROM students WHERE student_name = ?", (name,))
                         self.student_id = self.cursor.fetchone()[0]
-                        print(self.student_id)
                         self.cursor.execute(
                             f"""INSERT INTO class_student (class_id, student_id)
                                 VALUES (?, ?);
@@ -233,7 +239,7 @@ class ClassHomePage:
 
                 messagebox.showinfo("Success", "Students added successfully.")
                 self.viewstd_frame.pack_forget()
-                self.view_students()
+                self.manage_students()
 
 
             except sqlite3.Error as e:
@@ -268,15 +274,13 @@ class ClassHomePage:
             "Take Attendance",
             "Edit Records",
             "View Statistics",
-            "Delete Records",
-            "View Students",
+            "Manage Students",
         ]
         button_commands = [
             self.take_attendance,
             self.edit_records,
             self.view_statistics,
-            self.delete_records,
-            self.view_students,
+            self.manage_students,
         ]
 
         for i in range(0, len(button_texts), 2):
@@ -372,7 +376,7 @@ class MainPage:
             tk.Button(
                 self.home_frame,
                 text=class_name[0],
-                command=lambda cn=class_name[0].title(): self.class_details(cn),
+                command=lambda cn=class_name[0]: self.class_details(cn),
                 width=10,
                 height=2,
             ).pack(padx=5, pady=5)
@@ -420,7 +424,6 @@ class MainPage:
 
         for classvar in classes:
             label_text = f"{classvar[0]}: {classvar[1]}"
-            print(classvar[0])
             tk.Label(self.removeclass_frame, text=label_text).pack()
 
         self.rentry_index = tk.Entry(self.removeclass_frame)
