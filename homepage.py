@@ -14,7 +14,7 @@ class AttendanceManager:
         self.conn = conn
         self.cursor = self.conn.cursor()
         self.cursor.execute(
-            "CREATE TABLE IF NOT EXISTS attendance (attendance_id INTEGER PRIMARY KEY AUTOINCREMENT, student_id INTEGER, attendance_date DATE, status BOOLEAN, FOREIGN KEY (student_id) REFERENCES students(student_id));"
+            "CREATE TABLE IF NOT EXISTS attendance (attendance_id INTEGER PRIMARY KEY AUTOINCREMENT, class_id INTEGER, student_id INTEGER, attendance_date DATE, status BOOLEAN, FOREIGN KEY (class_id) REFERENCES class_student(class_id), FOREIGN KEY (student_id) REFERENCES students(student_id));"
         )
         self.conn.commit()
         self.take_attendance
@@ -67,7 +67,7 @@ class AttendanceManager:
         elif val=="Absent":
             status = False
 
-        self.cursor.execute(f"INSERT INTO attendance (student_id, attendance_date, status) VALUES (?,?,?)", (student_id, self.date, status,))
+        self.cursor.execute(f"INSERT INTO attendance (class_id, student_id, attendance_date, status) VALUES (?,?,?,?)", (self.class_id,student_id, self.date, status,))
         self.conn.commit()
 
         self.current_student +=1
@@ -91,6 +91,7 @@ class ClassHomePage:
         self.cursor.execute(f"SELECT class_id FROM classes WHERE class_name = ?", (self.class_name,))
         self.class_id = self.cursor.fetchone()[0]
 
+
     def wipepage(self):
         if hasattr(self, "viewstd_frame"):
             self.viewstd_frame.pack_forget()
@@ -100,9 +101,88 @@ class ClassHomePage:
             self.home_frame.pack_forget()
         if hasattr(self, "removeclass_frame"):
             self.removeclass_frame.pack_forget()
+        if hasattr(self, "edit_frame"):
+            self.edit_frame.pack_forget()
 
     def edit_records(self):
-        pass
+        def edit_record(event):
+            selected_item = self.tree.selection()
+            if not selected_item:
+                return
+
+            values = self.tree.item(selected_item, 'values')
+
+            self.selected_id = values[0]
+            displayed_status = "Present" if values[2] == 1 else "Absent"
+            self.status_var.set(displayed_status)
+
+            selected_name = values[1]
+            self.selected_name_label.config(text=f"Student: {selected_name}")
+        
+        def update_record():
+            if not hasattr(self, 'selected_id'):
+                return
+
+            displayed_status = self.status_var.get()
+
+            new_status_value = self.status_display_map.get(displayed_status, 0)
+
+            self.cursor.execute('UPDATE attendance SET status=? WHERE student_id=?', (new_status_value, self.selected_id))
+            self.conn.commit()
+
+            refresh_treeview()
+        
+        def refresh_treeview():
+            for child in self.tree.get_children():
+                self.tree.delete(child)
+
+            self.cursor.execute('''
+                SELECT students.student_id, students.student_name, attendance.status 
+                FROM attendance 
+                INNER JOIN students ON attendance.student_id = students.student_id WHERE attendance.class_id = ?
+            ''', (self.class_id,))
+            data = self.cursor.fetchall()
+
+            for row in data:
+                displayed_status = "Present" if row[2] == 1 else "Absent"
+                row_display = (row[0], row[1], displayed_status)
+                self.tree.insert('', 'end', values=row_display)    
+
+        self.wipepage()
+        self.edit_frame= tk.Frame(self.root)
+        self.edit_frame.pack(fill=tk.BOTH, expand=True)
+
+        self.tree = ttk.Treeview(self.edit_frame, columns=('Student ID', 'Student Name', 'Status'), show='headings')
+        self.tree.heading('Student ID', text='Student ID')
+        self.tree.heading('Student Name', text='Student Name')
+        self.tree.heading('Status', text='Status')
+
+        self.tree.bind("<Double-1>", edit_record)
+
+        self.tree.pack(pady=10)
+
+        self.entry_frame = tk.Frame(self.edit_frame)
+        self.entry_frame.pack(pady=5)
+
+        self.selected_name_label = tk.Label(self.entry_frame, text="Selected Student Name:")
+        self.selected_name_label.grid(row=0, column=0, padx=10, pady=5)
+
+        self.status_var = tk.StringVar()
+        self.status_display_map = {"Present": 1, "Absent": 0}
+        self.status_entry = ttk.Combobox(self.entry_frame, textvariable=self.status_var, values=["Absent", "Present"], state="readonly")
+        self.status_entry.grid(row=0, column=1, pady=5)
+
+        self.update_button = tk.Button(self.edit_frame, text="Update", command=update_record)
+        self.update_button.pack(pady=5)
+        self.button_back = tk.Button(
+            self.edit_frame,
+            text="Back",
+            command=lambda: self.classpage(),
+        )
+        self.button_back.pack(pady=10)
+
+        refresh_treeview()
+
 
     def view_statistics(self):
         pass
