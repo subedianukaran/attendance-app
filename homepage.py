@@ -59,10 +59,6 @@ class AttendanceManager:
 
         self.absent_button = tk.Button(self.attendance_frame, text="Absent", command=lambda: self.mark_attendance(self.stdid_array[self.current_student], "Absent"))
         self.absent_button.pack(side=tk.LEFT, padx=20)
-<<<<<<< HEAD
-=======
-
->>>>>>> origin
         
 
     def mark_attendance(self,student_id, val):
@@ -152,55 +148,6 @@ class ClassHomePage:
         )
         self.button_back.pack(pady=10)
 
-<<<<<<< HEAD
-=======
-    def view_students(self):
-        self.wipepage()
-        self.viewstd_frame = tk.Frame(self.root)
-        self.viewstd_frame.pack(fill=tk.BOTH, expand=True)
-        self.title_label = tk.Label(self.viewstd_frame, text= "")
-        self.title_label.pack()
-        self.title_label = tk.Label(self.viewstd_frame, text= "Students Data", font=("Arial", 15, "bold"))
-        self.title_label.pack()
-
-        self.cursor.execute(f"SELECT class_student.student_id, students.student_name FROM students INNER JOIN class_student ON students.student_id = class_student.student_id WHERE class_student.class_id= ?", (self.class_id,))
-        self.students = self.cursor.fetchall()
-
-        # Create a treeview
-        self.tree = tk.ttk.Treeview(self.viewstd_frame, columns=('ID', 'Name'), show='headings')
-
-        # Define column headings
-        self.tree.heading('ID', text='Student ID')
-        self.tree.heading('Name', text='Name')
-
-        # Add data to the treeview
-        for student in self.students:
-            self.tree.insert('', 'end', values=student)
-
-        # Pack the treeview
-        self.tree.pack()
-
-        button_frame = tk.Frame(self.viewstd_frame)
-        button_frame.pack(side=tk.BOTTOM, fill=tk.X, pady=10)
-
-        self.add_class_button = tk.Button(
-            button_frame, text="Add Students", command=self.add_students
-        )
-        self.add_class_button.pack(side=tk.LEFT, padx=10)
-
-        self.remove_class_button = tk.Button(
-            button_frame, text="Remove Students", command=self.remove_students
-        )
-        self.remove_class_button.pack(side=tk.RIGHT, padx=10)
-        self.button_back = tk.Button(
-            self.viewstd_frame,
-            text="Back",
-            command=lambda: self.classpage(),
-        )
-        self.button_back.pack(pady=10)
-
-
->>>>>>> origin
 
     def remove_students(self):
         def remove_students():
@@ -218,11 +165,6 @@ class ClassHomePage:
                             (name,)
                         )
                         student_id = self.cursor.fetchone()[0]
-<<<<<<< HEAD
-=======
-                        print('student_id is updated')
-                        print(student_id)
->>>>>>> origin
                         self.conn.commit()
                         self.cursor.execute(
                             f"DELETE FROM students WHERE student_id = ?", (student_id,)
@@ -239,11 +181,7 @@ class ClassHomePage:
                 self.conn.commit()
 
                 self.viewstd_frame.pack_forget()
-<<<<<<< HEAD
                 self.manage_students()
-=======
-                self.view_students()
->>>>>>> origin
 
                 if students_not_found:
                     messagebox.showwarning(
@@ -291,10 +229,6 @@ class ClassHomePage:
                         self.conn.commit()
                         self.cursor.execute(f"SELECT student_id FROM students WHERE student_name = ?", (name,))
                         self.student_id = self.cursor.fetchone()[0]
-<<<<<<< HEAD
-=======
-                        print(self.student_id)
->>>>>>> origin
                         self.cursor.execute(
                             f"""INSERT INTO class_student (class_id, student_id)
                                 VALUES (?, ?);
@@ -305,11 +239,7 @@ class ClassHomePage:
 
                 messagebox.showinfo("Success", "Students added successfully.")
                 self.viewstd_frame.pack_forget()
-<<<<<<< HEAD
                 self.manage_students()
-=======
-                self.view_students()
->>>>>>> origin
 
 
             except sqlite3.Error as e:
@@ -344,23 +274,13 @@ class ClassHomePage:
             "Take Attendance",
             "Edit Records",
             "View Statistics",
-<<<<<<< HEAD
             "Manage Students",
-=======
-            "Delete Records",
-            "View Students",
->>>>>>> origin
         ]
         button_commands = [
             self.take_attendance,
             self.edit_records,
             self.view_statistics,
-<<<<<<< HEAD
             self.manage_students,
-=======
-            self.delete_records,
-            self.view_students,
->>>>>>> origin
         ]
 
         for i in range(0, len(button_texts), 2):
