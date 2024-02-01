@@ -407,7 +407,6 @@ class MainPage:
 
     def remove_class_page(self):
         self.wipepage()
-
         self.removeclass_frame = tk.Frame(self.root)
         self.removeclass_frame.pack(fill=tk.BOTH, expand=True)
 

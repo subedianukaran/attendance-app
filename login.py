@@ -49,11 +49,8 @@ class Login:
 
     def encrypt_password(self, password):
         sha256 = hashlib.sha256()
-
         sha256.update(password.encode("utf-8"))
-
         encrypted_password = sha256.hexdigest()
-
         return encrypted_password
 
     def create_user_table(self):
