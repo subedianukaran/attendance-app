@@ -4,11 +4,12 @@ import sqlite3
 import hashlib
 from homepage import MainPage
 
+
 class Login:
     def __init__(self):
         self.root = tk.Tk()
         self.root.title("Login")
-        self.root.geometry("450x250") 
+        self.root.geometry("450x250")
         self.conn = sqlite3.connect("Database.db")
         self.cursor = self.conn.cursor()
         self.cursor.execute(
@@ -17,14 +18,14 @@ class Login:
         self.conn.commit()
         self.create_login_page()
 
-######################################### Encrypt the Inputted Password #####################################################
+    ######################################### Encrypt the Inputted Password #####################################################
     def encrypt_password(self, password):
         sha256 = hashlib.sha256()
         sha256.update(password.encode("utf-8"))
         encrypted_password = sha256.hexdigest()
         return encrypted_password
 
-######################################### Submit the New Username and Passowrd #####################################################
+    ######################################### Submit the New Username and Passowrd #####################################################
     def submit(self):
         new_username = self.entry_new_username.get()
         new_password = self.entry_new_password.get()
@@ -38,18 +39,23 @@ class Login:
                 "Username Exists", "Username already exists. Try logging in instead."
             )
         else:
-            self.cursor.execute("INSERT INTO users (username, password) VALUES (?, ?)",
-                (new_username, enc_password),)
+            self.cursor.execute(
+                "INSERT INTO users (username, password) VALUES (?, ?)",
+                (new_username, enc_password),
+            )
             self.conn.commit()
             messagebox.showinfo("Success", "User Added")
 
-######################################### Login Check and Entry ##########################################################
+    ######################################### Login Check and Entry ##########################################################
     def login_conn(self):
         entered_username = self.entry_username.get()
         entered_password = self.entry_password.get()
         enc_password = self.encrypt_password(entered_password)
 
-        self.cursor.execute("SELECT * FROM users WHERE username=? AND password=?", (entered_username, enc_password))
+        self.cursor.execute(
+            "SELECT * FROM users WHERE username=? AND password=?",
+            (entered_username, enc_password),
+        )
         user = self.cursor.fetchall()
         if user:
             messagebox.showinfo("Login", f"Welcome, {entered_username}!")
@@ -65,7 +71,7 @@ class Login:
         else:
             messagebox.showerror("Login Error", "Credentials don't match")
 
-######################################### Login Page UI #########################################################################
+    ######################################### Login Page UI #########################################################################
     def create_login_page(self):
         if hasattr(self, "signup_frame"):
             self.signup_frame.pack_forget()
@@ -97,7 +103,7 @@ class Login:
         )
         button_signup.pack(side=tk.LEFT)
 
-##################################### Sign Up Page UI #############################################
+    ##################################### Sign Up Page UI #############################################
 
     def create_signup_page(self):
         if hasattr(self, "signup_frame"):
@@ -131,6 +137,7 @@ class Login:
             command=lambda: self.create_login_page(),
         )
         button_return_login.pack(pady=10)
+
 
 display_instance = Login()
 display_instance.root.mainloop()

@@ -8,7 +8,7 @@ from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 
 
 class AttendanceManager:
-    def __init__(self,root,conn, class_id):
+    def __init__(self, root, conn, class_id):
 
         self.class_id = class_id
         self.root = root
@@ -20,62 +20,97 @@ class AttendanceManager:
         self.conn.commit()
         self.take_attendance
 
-############################ Check Attendance & Take Attendance #########################################################
+    ############################ Check Attendance & Take Attendance #########################################################
 
     def take_attendance(self):
         self.date = date.today()
         if self.date:
             self.cursor.execute(
                 "SELECT 1 FROM attendance INNER JOIN class_student ON attendance.student_id = class_student.student_id WHERE class_student.class_id = ? AND attendance.attendance_date = ? LIMIT 1",
-                (self.class_id,self.date,),
+                (
+                    self.class_id,
+                    self.date,
+                ),
             )
             self.conn.commit()
             existing_date = self.cursor.fetchone()
             if existing_date:
-                messagebox.showinfo("Attendance Taken", "Attendance already taken for today. Go to edit records to edit")
+                messagebox.showinfo(
+                    "Attendance Taken",
+                    "Attendance already taken for today. Go to edit records to edit",
+                )
             else:
-                self.cursor.execute(f"SELECT class_student.student_id, students.student_name FROM students INNER JOIN class_student ON students.student_id = class_student.student_id WHERE class_student.class_id= ?", (self.class_id,))
+                self.cursor.execute(
+                    f"SELECT class_student.student_id, students.student_name FROM students INNER JOIN class_student ON students.student_id = class_student.student_id WHERE class_student.class_id= ?",
+                    (self.class_id,),
+                )
                 self.students = self.cursor.fetchall()
-                self.stdid_array=[item[0] for item in self.students]
-                self.stdname_array=[item[1] for item in self.students]
-       
+                self.stdid_array = [item[0] for item in self.students]
+                self.stdname_array = [item[1] for item in self.students]
+
                 self.attendance_window = tk.Toplevel()
                 self.attendance_window.geometry("300x200")
                 self.attendance_window.title(f"Attendance for {self.date}")
                 self.current_student = 0
                 self.show_attendance()
 
-######################### UI for taking Attendance ######################################################################
-                
+    ######################### UI for taking Attendance ######################################################################
+
     def show_attendance(self):
         if hasattr(self, "attendance_frame"):
             self.attendance_frame.pack_forget()
         self.attendance_frame = tk.Frame(self.attendance_window)
         self.attendance_frame.pack(fill=tk.BOTH, expand=True)
-        self.id_label = tk.Label(self.attendance_frame, text = f"Student ID: {self.stdid_array[self.current_student]}")
+        self.id_label = tk.Label(
+            self.attendance_frame,
+            text=f"Student ID: {self.stdid_array[self.current_student]}",
+        )
         self.id_label.pack()
 
-        self.name_label = tk.Label(self.attendance_frame, text = f"Name: {self.stdname_array[self.current_student]}")
+        self.name_label = tk.Label(
+            self.attendance_frame,
+            text=f"Name: {self.stdname_array[self.current_student]}",
+        )
         self.name_label.pack()
 
-        self.present_button = tk.Button(self.attendance_frame, text="Present", command=lambda: self.mark_attendance(self.stdid_array[self.current_student], "Present"))
+        self.present_button = tk.Button(
+            self.attendance_frame,
+            text="Present",
+            command=lambda: self.mark_attendance(
+                self.stdid_array[self.current_student], "Present"
+            ),
+        )
         self.present_button.pack(side=tk.RIGHT, padx=20)
 
-        self.absent_button = tk.Button(self.attendance_frame, text="Absent", command=lambda: self.mark_attendance(self.stdid_array[self.current_student], "Absent"))
+        self.absent_button = tk.Button(
+            self.attendance_frame,
+            text="Absent",
+            command=lambda: self.mark_attendance(
+                self.stdid_array[self.current_student], "Absent"
+            ),
+        )
         self.absent_button.pack(side=tk.LEFT, padx=20)
-        
-###################### Mark Attendance in the Database ##############################################################
-        
-    def mark_attendance(self,student_id, val):
-        if val=="Present":
+
+    ###################### Mark Attendance in the Database ##############################################################
+
+    def mark_attendance(self, student_id, val):
+        if val == "Present":
             status = True
-        elif val=="Absent":
+        elif val == "Absent":
             status = False
 
-        self.cursor.execute(f"INSERT INTO attendance (class_id, student_id, attendance_date, status) VALUES (?,?,?,?)", (self.class_id,student_id, self.date, status,))
+        self.cursor.execute(
+            f"INSERT INTO attendance (class_id, student_id, attendance_date, status) VALUES (?,?,?,?)",
+            (
+                self.class_id,
+                student_id,
+                self.date,
+                status,
+            ),
+        )
         self.conn.commit()
 
-        self.current_student +=1
+        self.current_student += 1
 
         if self.current_student < len(self.students):
             self.show_attendance()
@@ -93,16 +128,18 @@ class ClassHomePage:
         self.cursor = cursor
         self.conn = conn
         self.conn.commit()
-        self.cursor.execute(f"SELECT class_id FROM classes WHERE class_name = ?", (self.class_name,))
+        self.cursor.execute(
+            f"SELECT class_id FROM classes WHERE class_name = ?", (self.class_name,)
+        )
         self.class_id = self.cursor.fetchone()[0]
 
     def logout(self):
         self.root.destroy()
         import login
-    
-#################### Sorting Algorithm ##############################################################################
 
-    def selection_sort(self,record, sort_by):
+    #################### Sorting Algorithm ##############################################################################
+
+    def selection_sort(self, record, sort_by):
         n = len(record)
 
         if sort_by == "Student ID":
@@ -119,7 +156,7 @@ class ClassHomePage:
                     min = j
 
             record[i], record[min] = record[min], record[i]
-        
+
         self.update_treeview()
 
     def wipepage(self):
@@ -134,15 +171,15 @@ class ClassHomePage:
         if hasattr(self, "edit_frame"):
             self.edit_frame.pack_forget()
 
-################################# Edit Record Button Function ##########################################
-            
+    ################################# Edit Record Button Function ##########################################
+
     def edit_records(self):
         def edit_record(event):
             selected_item = self.tree.selection()
             if not selected_item:
                 return
 
-            values = self.tree.item(selected_item, 'values')
+            values = self.tree.item(selected_item, "values")
 
             self.selected_id = values[0]
             displayed_status = "Present" if values[2] == 1 else "Absent"
@@ -150,45 +187,57 @@ class ClassHomePage:
 
             selected_name = values[1]
             self.selected_name_label.config(text=f"Student: {selected_name}")
-        
+
         def update_record():
-            if not hasattr(self, 'selected_id'):
+            if not hasattr(self, "selected_id"):
                 return
 
             displayed_status = self.status_var.get()
 
             new_status_value = self.status_display_map.get(displayed_status, 0)
 
-            self.cursor.execute('UPDATE attendance SET status=? WHERE student_id=?', (new_status_value, self.selected_id))
+            self.cursor.execute(
+                "UPDATE attendance SET status=? WHERE student_id=?",
+                (new_status_value, self.selected_id),
+            )
             self.conn.commit()
 
             refresh_treeview()
-        
+
         def refresh_treeview():
             for child in self.tree.get_children():
                 self.tree.delete(child)
 
-            self.cursor.execute('''
+            self.cursor.execute(
+                """
                 SELECT students.student_id, students.student_name, attendance.status 
                 FROM attendance 
                 INNER JOIN students ON attendance.student_id = students.student_id WHERE attendance.class_id = ? AND attendance.attendance_date = ?
-            ''', (self.class_id,self.date,))
+            """,
+                (
+                    self.class_id,
+                    self.date,
+                ),
+            )
             data = self.cursor.fetchall()
-
 
             for row in data:
                 displayed_status = "Present" if row[2] == 1 else "Absent"
                 row_display = (row[0], row[1], displayed_status)
-                self.tree.insert('', 'end', values=row_display)    
+                self.tree.insert("", "end", values=row_display)
 
         self.wipepage()
-        self.edit_frame= tk.Frame(self.root)
+        self.edit_frame = tk.Frame(self.root)
         self.edit_frame.pack(fill=tk.BOTH, expand=True)
 
-        self.tree = ttk.Treeview(self.edit_frame, columns=('Student ID', 'Student Name', 'Status'), show='headings')
-        self.tree.heading('Student ID', text='Student ID')
-        self.tree.heading('Student Name', text='Student Name')
-        self.tree.heading('Status', text='Status')
+        self.tree = ttk.Treeview(
+            self.edit_frame,
+            columns=("Student ID", "Student Name", "Status"),
+            show="headings",
+        )
+        self.tree.heading("Student ID", text="Student ID")
+        self.tree.heading("Student Name", text="Student Name")
+        self.tree.heading("Status", text="Status")
 
         self.tree.bind("<Double-1>", edit_record)
 
@@ -197,15 +246,24 @@ class ClassHomePage:
         self.entry_frame = tk.Frame(self.edit_frame)
         self.entry_frame.pack(pady=5)
 
-        self.selected_name_label = tk.Label(self.entry_frame, text="Selected Student Name:")
+        self.selected_name_label = tk.Label(
+            self.entry_frame, text="Selected Student Name:"
+        )
         self.selected_name_label.grid(row=0, column=0, padx=10, pady=5)
 
         self.status_var = tk.StringVar()
         self.status_display_map = {"Present": 1, "Absent": 0}
-        self.status_entry = ttk.Combobox(self.entry_frame, textvariable=self.status_var, values=["Absent", "Present"], state="readonly")
+        self.status_entry = ttk.Combobox(
+            self.entry_frame,
+            textvariable=self.status_var,
+            values=["Absent", "Present"],
+            state="readonly",
+        )
         self.status_entry.grid(row=0, column=1, pady=5)
 
-        self.update_button = tk.Button(self.edit_frame, text="Update", command=update_record)
+        self.update_button = tk.Button(
+            self.edit_frame, text="Update", command=update_record
+        )
         self.update_button.pack(pady=5)
         self.button_back = tk.Button(
             self.edit_frame,
@@ -216,7 +274,7 @@ class ClassHomePage:
 
         refresh_treeview()
 
-############################### View Statistics Button Function ####################################################################
+    ############################### View Statistics Button Function ####################################################################
 
     def view_statistics(self):
         self.cursor.execute(
@@ -231,12 +289,12 @@ class ClassHomePage:
         )
         absent_count = self.cursor.fetchone()[0]
         self.conn.commit()
-        labels = ['Present', 'Absent']
+        labels = ["Present", "Absent"]
         sizes = [present_count, absent_count]
 
         fig, ax = plt.subplots()
-        ax.pie(sizes, labels=labels, autopct='%1.1f%%', startangle=90)
-        ax.axis('equal')      
+        ax.pie(sizes, labels=labels, autopct="%1.1f%%", startangle=90)
+        ax.axis("equal")
         ax.set_title("Attendance Distribution", fontsize=16)
 
         pie_chart_window = tk.Toplevel(self.root)
@@ -245,36 +303,46 @@ class ClassHomePage:
         canvas.get_tk_widget().pack()
         canvas.draw()
 
-        plt.close(fig) 
+        plt.close(fig)
 
-############################### Manage Students Button Function #################################################
+    ############################### Manage Students Button Function #################################################
 
     def manage_students(self):
         self.wipepage()
         self.viewstd_frame = tk.Frame(self.root)
         self.viewstd_frame.pack(fill=tk.BOTH, expand=True)
 
-        self.cursor.execute(f"SELECT class_student.student_id, students.student_name FROM students INNER JOIN class_student ON students.student_id = class_student.student_id WHERE class_student.class_id= ?", (self.class_id,))
+        self.cursor.execute(
+            f"SELECT class_student.student_id, students.student_name FROM students INNER JOIN class_student ON students.student_id = class_student.student_id WHERE class_student.class_id= ?",
+            (self.class_id,),
+        )
         self.students = self.cursor.fetchall()
 
         self.sort_by_variable = tk.StringVar()
-        sort_combobox = ttk.Combobox(self.viewstd_frame, textvariable=self.sort_by_variable, values=["Student ID", "Student Name"])
+        sort_combobox = ttk.Combobox(
+            self.viewstd_frame,
+            textvariable=self.sort_by_variable,
+            values=["Student ID", "Student Name"],
+        )
         sort_combobox.set("Sort by")
         sort_combobox.pack()
         sort_combobox.bind("<<ComboboxSelected>>", self.sort_students)
 
-
-        self.title_label = tk.Label(self.viewstd_frame, text= "")
+        self.title_label = tk.Label(self.viewstd_frame, text="")
         self.title_label.pack()
-        self.title_label = tk.Label(self.viewstd_frame, text= "Students Data", font=("Arial", 15, "bold"))
+        self.title_label = tk.Label(
+            self.viewstd_frame, text="Students Data", font=("Arial", 15, "bold")
+        )
         self.title_label.pack()
-        self.tree = tk.ttk.Treeview(self.viewstd_frame, columns=('ID', 'Name'), show='headings')
+        self.tree = tk.ttk.Treeview(
+            self.viewstd_frame, columns=("ID", "Name"), show="headings"
+        )
 
-        self.tree.heading('ID', text='Student ID')
-        self.tree.heading('Name', text='Name')
+        self.tree.heading("ID", text="Student ID")
+        self.tree.heading("Name", text="Name")
 
         for student in self.students:
-            self.tree.insert('', 'end', values=student)
+            self.tree.insert("", "end", values=student)
 
         self.tree.pack()
 
@@ -308,9 +376,9 @@ class ClassHomePage:
             self.tree.delete(child)
 
         for student in self.students:
-            self.tree.insert('', 'end', values=student)
+            self.tree.insert("", "end", values=student)
 
-########################### Remove Existing Students ####################################################
+    ########################### Remove Existing Students ####################################################
 
     def remove_students(self):
         def remove_students():
@@ -325,7 +393,7 @@ class ClassHomePage:
                     if name:
                         self.cursor.execute(
                             "SELECT student_id FROM students WHERE student_name = ?",
-                            (name,)
+                            (name,),
                         )
                         student_id = self.cursor.fetchone()[0]
                         self.conn.commit()
@@ -335,7 +403,7 @@ class ClassHomePage:
                         self.conn.commit()
                         self.cursor.execute(
                             f"DELETE FROM class_student WHERE student_id = ?",
-                            (student_id,)
+                            (student_id,),
                         )
                         self.conn.commit()
                         if self.cursor.rowcount == 0:
@@ -374,11 +442,11 @@ class ClassHomePage:
         remove_button.pack()
 
     def take_attendance(self):
-        attendance = AttendanceManager(self.root,self.conn,self.class_id)
+        attendance = AttendanceManager(self.root, self.conn, self.class_id)
         attendance.take_attendance()
 
-############################# Add New Students ##########################################################
-        
+    ############################# Add New Students ##########################################################
+
     def add_students(self):
         def add_students_d():
             student_names = student_entry.get()
@@ -392,7 +460,10 @@ class ClassHomePage:
                             f"INSERT INTO students (student_name) VALUES (?)", (name,)
                         )
                         self.conn.commit()
-                        self.cursor.execute(f"SELECT student_id FROM students WHERE student_name = ?", (name,))
+                        self.cursor.execute(
+                            f"SELECT student_id FROM students WHERE student_name = ?",
+                            (name,),
+                        )
                         self.student_id = self.cursor.fetchone()[0]
                         self.cursor.execute(
                             f"""INSERT INTO class_student (class_id, student_id)
@@ -405,7 +476,6 @@ class ClassHomePage:
                 messagebox.showinfo("Success", "Students added successfully.")
                 self.viewstd_frame.pack_forget()
                 self.manage_students()
-
 
             except sqlite3.Error as e:
                 messagebox.showerror("Database Error", f"Error: {e}")
@@ -424,7 +494,7 @@ class ClassHomePage:
         add_button = tk.Button(student_window, text="Add", command=add_students_d)
         add_button.pack()
 
-############################### Class Page UI ####################################################################
+    ############################### Class Page UI ####################################################################
 
     def classpage(self):
         self.wipepage()
@@ -594,7 +664,7 @@ class MainPage:
         self.cursor.execute(
             "SELECT * FROM classes INNER JOIN user_class ON classes.class_id = user_class.class_id where user_id = ?",
             (self.user_id,),
-        )  
+        )
         classes = self.cursor.fetchall()
 
         for classvar in classes:
@@ -616,10 +686,12 @@ class MainPage:
 
     def class_details(self, class_name):
         self.wipepage()
-        class_page = ClassHomePage(class_name, self.root, self.cursor, self.conn, self.user_id)
+        class_page = ClassHomePage(
+            class_name, self.root, self.cursor, self.conn, self.user_id
+        )
         class_page.classpage()
 
-################################### Home Page UI #################################################################3
+    ################################### Home Page UI #################################################################3
 
     def home_page(self):
         self.home_frame = tk.Frame(self.root)
