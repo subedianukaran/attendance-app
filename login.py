@@ -18,14 +18,14 @@ class Login:
         self.conn.commit()
         self.create_login_page()
 
-    ######################################### Encrypt the Inputted Password #####################################################
+    ######################################### Encrypt the Inputted Password ##################################
     def encrypt_password(self, password):
         sha256 = hashlib.sha256()
         sha256.update(password.encode("utf-8"))
         encrypted_password = sha256.hexdigest()
         return encrypted_password
 
-    ######################################### Submit the New Username and Passowrd #####################################################
+    ######################################### Submit the New Username and Passowrd ##########################
     def submit(self):
         new_username = self.entry_new_username.get()
         new_password = self.entry_new_password.get()
@@ -46,7 +46,7 @@ class Login:
             self.conn.commit()
             messagebox.showinfo("Success", "User Added")
 
-    ######################################### Login Check and Entry ##########################################################
+    ######################################### Login Check and Entry #######################################
     def login_conn(self):
         entered_username = self.entry_username.get()
         entered_password = self.entry_password.get()
@@ -71,7 +71,7 @@ class Login:
         else:
             messagebox.showerror("Login Error", "Credentials don't match")
 
-    ######################################### Login Page UI #########################################################################
+    ######################################### Login Page UI ##############################################
     def create_login_page(self):
         if hasattr(self, "signup_frame"):
             self.signup_frame.pack_forget()
@@ -138,6 +138,6 @@ class Login:
         )
         button_return_login.pack(pady=10)
 
-
-display_instance = Login()
-display_instance.root.mainloop()
+if __name__ == "__main__":
+    display_instance = Login()
+    display_instance.root.mainloop()

@@ -274,7 +274,7 @@ class ClassHomePage:
 
         refresh_treeview()
 
-    ############################### View Statistics Button Function ####################################################################
+    ############################### View Statistics Button Function #####################################################
 
     def view_statistics(self):
         self.cursor.execute(
@@ -647,7 +647,6 @@ class MainPage:
                     "DELETE FROM user_class WHERE class_id=?", (selected_class_id,)
                 )
                 self.conn.commit()
-                # left to remove students from those classes
                 self.removeclass_frame.destroy()
                 self.remove_class_page()
 
