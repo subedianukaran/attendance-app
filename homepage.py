@@ -2,7 +2,6 @@ import tkinter as tk
 from tkinter import messagebox
 from tkinter import ttk
 import sqlite3
-from tkcalendar import Calendar
 from datetime import date
 import matplotlib.pyplot as plt
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
@@ -21,6 +20,7 @@ class AttendanceManager:
         self.conn.commit()
         self.take_attendance
 
+############################ Check Attendance & Take Attendance #########################################################
 
     def take_attendance(self):
         self.date = date.today()
@@ -45,6 +45,8 @@ class AttendanceManager:
                 self.current_student = 0
                 self.show_attendance()
 
+######################### UI for taking Attendance ######################################################################
+                
     def show_attendance(self):
         if hasattr(self, "attendance_frame"):
             self.attendance_frame.pack_forget()
@@ -62,7 +64,8 @@ class AttendanceManager:
         self.absent_button = tk.Button(self.attendance_frame, text="Absent", command=lambda: self.mark_attendance(self.stdid_array[self.current_student], "Absent"))
         self.absent_button.pack(side=tk.LEFT, padx=20)
         
-
+###################### Mark Attendance in the Database ##############################################################
+        
     def mark_attendance(self,student_id, val):
         if val=="Present":
             status = True
@@ -97,6 +100,8 @@ class ClassHomePage:
         self.root.destroy()
         import login
     
+#################### Sorting Algorithm ##############################################################################
+
     def selection_sort(self,record, sort_by):
         n = len(record)
 
@@ -115,6 +120,7 @@ class ClassHomePage:
 
             record[i], record[min] = record[min], record[i]
         
+        self.update_treeview()
 
     def wipepage(self):
         if hasattr(self, "viewstd_frame"):
@@ -255,8 +261,8 @@ class ClassHomePage:
         sort_combobox = ttk.Combobox(self.viewstd_frame, textvariable=self.sort_by_variable, values=["Student ID", "Student Name"])
         sort_combobox.set("Sort by")
         sort_combobox.pack()
-        sort_button = tk.Button(self.viewstd_frame, text="Sort",command=self.selection_sort(self.students,self.sort_by_variable))
-        sort_button.pack()
+        sort_combobox.bind("<<ComboboxSelected>>", self.sort_students)
+
 
         self.title_label = tk.Label(self.viewstd_frame, text= "")
         self.title_label.pack()
@@ -291,7 +297,20 @@ class ClassHomePage:
         )
         self.button_back.pack(pady=10)
 
+    def sort_students(self, event):
+        sort_by = self.sort_by_variable.get()
+        if sort_by in ["Student ID", "Student Name"]:
+            self.selection_sort(self.students, sort_by)
+            self.update_treeview()
 
+    def update_treeview(self):
+        for child in self.tree.get_children():
+            self.tree.delete(child)
+
+        for student in self.students:
+            self.tree.insert('', 'end', values=student)
+
+########################### Remove Existing Students ####################################################
 
     def remove_students(self):
         def remove_students():
@@ -358,6 +377,8 @@ class ClassHomePage:
         attendance = AttendanceManager(self.root,self.conn,self.class_id)
         attendance.take_attendance()
 
+############################# Add New Students ##########################################################
+        
     def add_students(self):
         def add_students_d():
             student_names = student_entry.get()
@@ -403,7 +424,7 @@ class ClassHomePage:
         add_button = tk.Button(student_window, text="Add", command=add_students_d)
         add_button.pack()
 
-############################### Class Page ####################################################################
+############################### Class Page UI ####################################################################
 
     def classpage(self):
         self.wipepage()
@@ -597,6 +618,8 @@ class MainPage:
         self.wipepage()
         class_page = ClassHomePage(class_name, self.root, self.cursor, self.conn, self.user_id)
         class_page.classpage()
+
+################################### Home Page UI #################################################################3
 
     def home_page(self):
         self.home_frame = tk.Frame(self.root)
