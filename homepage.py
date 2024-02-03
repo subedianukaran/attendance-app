@@ -2,7 +2,7 @@ import tkinter as tk
 from tkinter import messagebox
 from tkinter import ttk
 import sqlite3
-from tkinter import simpledialog
+from tkcalendar import Calendar
 from datetime import date
 import matplotlib.pyplot as plt
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
@@ -50,10 +50,10 @@ class AttendanceManager:
             self.attendance_frame.pack_forget()
         self.attendance_frame = tk.Frame(self.attendance_window)
         self.attendance_frame.pack(fill=tk.BOTH, expand=True)
-        self.id_label = tk.Label(self.attendance_frame, text = f"Name: {self.stdid_array[self.current_student]}")
+        self.id_label = tk.Label(self.attendance_frame, text = f"Student ID: {self.stdid_array[self.current_student]}")
         self.id_label.pack()
 
-        self.name_label = tk.Label(self.attendance_frame, text = f"{self.stdname_array[self.current_student]}")
+        self.name_label = tk.Label(self.attendance_frame, text = f"Name: {self.stdname_array[self.current_student]}")
         self.name_label.pack()
 
         self.present_button = tk.Button(self.attendance_frame, text="Present", command=lambda: self.mark_attendance(self.stdid_array[self.current_student], "Present"))
@@ -81,7 +81,6 @@ class AttendanceManager:
             messagebox.showinfo("Info", "Attendance taken for all students.")
 
 
-
 class ClassHomePage:
     def __init__(self, class_name, root, cursor, conn, user_id):
         self.class_name = class_name
@@ -93,6 +92,29 @@ class ClassHomePage:
         self.conn.commit()
         self.cursor.execute(f"SELECT class_id FROM classes WHERE class_name = ?", (self.class_name,))
         self.class_id = self.cursor.fetchone()[0]
+
+    def logout(self):
+        self.root.destroy()
+        import login
+    
+    def selection_sort(self,record, sort_by):
+        n = len(record)
+
+        if sort_by == "Student ID":
+            sortby = 0
+        elif sort_by == "Student Name":
+            sortby = 1
+        else:
+            sortby = 0
+
+        for i in range(n - 1):
+            min = i
+            for j in range(i + 1, n):
+                if record[j][sortby] < record[min][sortby]:
+                    min = j
+
+            record[i], record[min] = record[min], record[i]
+        
 
     def wipepage(self):
         if hasattr(self, "viewstd_frame"):
@@ -106,6 +128,8 @@ class ClassHomePage:
         if hasattr(self, "edit_frame"):
             self.edit_frame.pack_forget()
 
+################################# Edit Record Button Function ##########################################
+            
     def edit_records(self):
         def edit_record(event):
             selected_item = self.tree.selection()
@@ -144,6 +168,7 @@ class ClassHomePage:
                 INNER JOIN students ON attendance.student_id = students.student_id WHERE attendance.class_id = ? AND attendance.attendance_date = ?
             ''', (self.class_id,self.date,))
             data = self.cursor.fetchall()
+
 
             for row in data:
                 displayed_status = "Present" if row[2] == 1 else "Absent"
@@ -185,6 +210,7 @@ class ClassHomePage:
 
         refresh_treeview()
 
+############################### View Statistics Button Function ####################################################################
 
     def view_statistics(self):
         self.cursor.execute(
@@ -215,19 +241,27 @@ class ClassHomePage:
 
         plt.close(fig) 
 
+############################### Manage Students Button Function #################################################
 
     def manage_students(self):
         self.wipepage()
         self.viewstd_frame = tk.Frame(self.root)
         self.viewstd_frame.pack(fill=tk.BOTH, expand=True)
-        self.title_label = tk.Label(self.viewstd_frame, text= "")
-        self.title_label.pack()
-        self.title_label = tk.Label(self.viewstd_frame, text= "Students Data", font=("Arial", 15, "bold"))
-        self.title_label.pack()
 
         self.cursor.execute(f"SELECT class_student.student_id, students.student_name FROM students INNER JOIN class_student ON students.student_id = class_student.student_id WHERE class_student.class_id= ?", (self.class_id,))
         self.students = self.cursor.fetchall()
 
+        self.sort_by_variable = tk.StringVar()
+        sort_combobox = ttk.Combobox(self.viewstd_frame, textvariable=self.sort_by_variable, values=["Student ID", "Student Name"])
+        sort_combobox.set("Sort by")
+        sort_combobox.pack()
+        sort_button = tk.Button(self.viewstd_frame, text="Sort",command=self.selection_sort(self.students,self.sort_by_variable))
+        sort_button.pack()
+
+        self.title_label = tk.Label(self.viewstd_frame, text= "")
+        self.title_label.pack()
+        self.title_label = tk.Label(self.viewstd_frame, text= "Students Data", font=("Arial", 15, "bold"))
+        self.title_label.pack()
         self.tree = tk.ttk.Treeview(self.viewstd_frame, columns=('ID', 'Name'), show='headings')
 
         self.tree.heading('ID', text='Student ID')
@@ -256,6 +290,7 @@ class ClassHomePage:
             command=lambda: self.classpage(),
         )
         self.button_back.pack(pady=10)
+
 
 
     def remove_students(self):
@@ -368,6 +403,8 @@ class ClassHomePage:
         add_button = tk.Button(student_window, text="Add", command=add_students_d)
         add_button.pack()
 
+############################### Class Page ####################################################################
+
     def classpage(self):
         self.wipepage()
         self.class_frame = tk.Frame(self.root)
@@ -406,6 +443,11 @@ class ClassHomePage:
                     )
                     button.pack(side=tk.LEFT, padx=20, pady=20)
 
+        logout_button = tk.Button(
+            self.class_frame, text="Log Out", command=lambda: self.logout()
+        )
+        logout_button.pack(side=tk.BOTTOM, pady=10)
+
 
 class MainPage:
     def __init__(self, user_id):
@@ -440,6 +482,10 @@ class MainPage:
             self.class_frame.pack_forget()
         if hasattr(self, "removeclass_frame"):
             self.removeclass_frame.pack_forget()
+
+    def logout(self):
+        self.root.destroy()
+        import login
 
     def add_new_class(self):
         self.new_class_name = tk.simpledialog.askstring(
@@ -575,3 +621,8 @@ class MainPage:
             button_frame, text="Remove Class", command=self.remove_class_page
         )
         self.remove_class_button.pack(side=tk.RIGHT, padx=10)
+
+        logout_button = tk.Button(
+            button_frame, text="Log Out", command=lambda: self.logout()
+        )
+        logout_button.pack(side=tk.BOTTOM)
