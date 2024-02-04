@@ -69,7 +69,7 @@ class Login:
             homepage = MainPage(user_id)
             homepage.root.mainloop()
         else:
-            messagebox.showerror("Login Error", "Credentials don't match")
+            messagebox.showerror("Login Error", "Invalid username or password")
 
     ######################################### Login Page UI ##############################################
     def create_login_page(self):
@@ -138,6 +138,5 @@ class Login:
         )
         button_return_login.pack(pady=10)
 
-if __name__ == "__main__":
-    display_instance = Login()
-    display_instance.root.mainloop()
+display_instance = Login()
+display_instance.root.mainloop()
