@@ -693,6 +693,7 @@ class MainPage:
     ################################### Home Page UI #################################################################3
 
     def home_page(self):
+        self.wipepage()
         self.home_frame = tk.Frame(self.root)
         self.home_frame.pack(fill=tk.BOTH, expand=True)
 
